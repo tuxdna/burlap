@@ -1,51 +1,32 @@
 package burlap.behavior.affordances;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import burlap.behavior.singleagent.EpisodeAnalysis;
-import burlap.behavior.singleagent.Policy;
-import burlap.behavior.singleagent.auxiliary.StateReachability;
-import burlap.behavior.singleagent.auxiliary.valuefunctionvis.ValueFunctionVisualizerGUI;
-import burlap.behavior.singleagent.auxiliary.valuefunctionvis.common.ArrowActionGlyph;
-import burlap.behavior.singleagent.auxiliary.valuefunctionvis.common.LandmarkColorBlendInterpolation;
-import burlap.behavior.singleagent.auxiliary.valuefunctionvis.common.PolicyGlyphPainter2D;
-import burlap.behavior.singleagent.auxiliary.valuefunctionvis.common.PolicyGlyphPainter2D.PolicyGlyphRenderStyle;
-import burlap.behavior.singleagent.auxiliary.valuefunctionvis.common.StateValuePainter2D;
-import burlap.behavior.singleagent.planning.OOMDPPlanner;
-import burlap.behavior.singleagent.planning.QComputablePlanner;
-import burlap.behavior.singleagent.planning.commonpolicies.AffordanceGreedyQPolicy;
-import burlap.behavior.singleagent.planning.commonpolicies.GreedyQPolicy;
-import burlap.behavior.singleagent.planning.stochastic.rtdp.AffordanceRTDP;
-import burlap.behavior.singleagent.planning.stochastic.rtdp.RTDP;
-import burlap.behavior.singleagent.planning.stochastic.valueiteration.ValueIteration;
-import burlap.behavior.statehashing.DiscreteStateHashFactory;
-import burlap.domain.singleagent.gridworld.GridWorldDomain;
+import minecraft.MinecraftStateParser;
+import minecraft.NameSpace;
 import burlap.oomdp.core.AbstractGroundedAction;
-import burlap.oomdp.core.Domain;
-import burlap.oomdp.core.GroundedProp;
-import burlap.oomdp.core.PropositionalFunction;
+import burlap.oomdp.core.ObjectInstance;
 import burlap.oomdp.core.State;
-import burlap.oomdp.core.TerminalFunction;
 import burlap.oomdp.logicalexpressions.LogicalExpression;
-import burlap.oomdp.logicalexpressions.PFAtom;
 import burlap.oomdp.singleagent.Action;
-import burlap.oomdp.singleagent.GroundedAction;
-import burlap.oomdp.singleagent.RewardFunction;
-import burlap.oomdp.singleagent.SADomain;
-import burlap.oomdp.singleagent.common.SinglePFTF;
-import burlap.oomdp.singleagent.common.UniformCostRF;
 
 public class AffordancesController {
 
 	protected List<AffordanceDelegate> affordances;
-	protected LogicalExpression currentGoal;
+	public LogicalExpression currentGoal;
+	protected HashMap<State,List<AbstractGroundedAction>> stateActionHash = new HashMap<State,List<AbstractGroundedAction>>();
+	protected boolean cacheActionSets = false; // True when we only sample action sets each time we enter a state, then cache for later use. 
+	private List<AbstractGroundedAction> allActions;
 	
 	public AffordancesController(List<AffordanceDelegate> affs) {
 		this.affordances = affs;
+	}
+	
+	public AffordancesController(List<AffordanceDelegate> affs, boolean cacheActionsInEachState) {
+		this.affordances = affs;
+		this.cacheActionSets = cacheActionsInEachState;
 	}
 	
 	/**
@@ -69,6 +50,51 @@ public class AffordancesController {
 	}
 	
 	/**
+	 * Takes the union of each affordance's
+	 * @return
+	 */
+	public List<AbstractGroundedAction> getPrunedActionSetForState(State s) {
+		
+		// If we're caching actions and we've already seen this state
+		if (cacheActionSets && stateActionHash.containsKey(s)) {
+			return stateActionHash.get(s);
+		}
+		
+		List<AbstractGroundedAction> actions = new ArrayList<AbstractGroundedAction>();
+		for(AffordanceDelegate aff : this.affordances){
+			// If affordance is active
+			if(aff.primeAndCheckIfActiveInState(s, currentGoal)){
+				aff.resampleActionSet();
+				for(AbstractGroundedAction aga : aff.listedActionSet) {
+					// If that action wasn't added yet then add it
+					if(!actions.contains(aga)) {
+						actions.add(aga);
+					}
+				}
+			}
+			
+		}
+		
+//		System.out.println("(AffordancesController) Affordance Action Set: ");
+//		for(AbstractGroundedAction aga : actions) {
+//			System.out.println("\t(AffordancesController) action: " + aga.actionName());
+//		}
+//		System.out.println("\n");
+		
+		if (actions.size() == 0) {
+			// return full action set
+//			System.out.println("(AffordancesController) EMPTY ACTION SET");
+		}
+		
+		// If we're caching, add the action set we just computed
+		if(cacheActionSets) {
+			stateActionHash.put(s, actions);
+		}
+		
+		return actions;
+	}
+	
+	/**
 	 * Retrieves the list of relevant actions for a particular state, as pruned by affordances.
 	 * @param actions: The set of actions to consider
 	 * @param s: The current world state
@@ -76,13 +102,20 @@ public class AffordancesController {
 	 */
 	public List<AbstractGroundedAction> filterIrrelevantActionsInState(List<AbstractGroundedAction> actions, State s){
 		
+		// If we're caching actions and we've already seen this state
+		if (cacheActionSets && stateActionHash.containsKey(s)) {
+			return stateActionHash.get(s);
+		}
+		
+		// Build active affordance list
 		List<AffordanceDelegate> activeAffordances = new ArrayList<AffordanceDelegate>(this.affordances.size());
 		for(AffordanceDelegate aff : this.affordances){
-			if(aff.primeAndCheckIfActiveInState(s)){
+			if(aff.primeAndCheckIfActiveInState(s, currentGoal)){
 				activeAffordances.add(aff);
 			}
 		}
 		
+		// Prune actions according to affordances
 		List<AbstractGroundedAction> filteredList = new ArrayList<AbstractGroundedAction>(actions.size());
 		for(AbstractGroundedAction a : actions){
 			for(AffordanceDelegate aff : activeAffordances){
@@ -93,7 +126,27 @@ public class AffordancesController {
 			}
 		}
 		
+		// If we filtered away everything, back off to full action set.
+		if(filteredList.size() == 0) {
+			return actions;
+		}
+
+		// If we're caching, add the action set we just computed
+		if(cacheActionSets) {
+			stateActionHash.put(s, filteredList);
+		}
+		
 		return filteredList;
+	}
+	
+	public void addAffordanceDelegate(AffordanceDelegate aff) {
+		if(!this.affordances.contains(aff)) {
+			this.affordances.add(aff);
+		}
+	}
+	
+	public void removeAffordance(AffordanceDelegate aff) {
+		this.affordances.remove(aff);
 	}
 	
 }

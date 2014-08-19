@@ -1,11 +1,8 @@
 package burlap.oomdp.singleagent.common;
 
-import java.util.List;
-
-import burlap.oomdp.core.GroundedProp;
-import burlap.oomdp.core.PropositionalFunction;
 import burlap.oomdp.core.State;
 import burlap.oomdp.core.TerminalFunction;
+import burlap.oomdp.logicalexpressions.LogicalExpression;
 
 
 /**
@@ -14,19 +11,19 @@ import burlap.oomdp.core.TerminalFunction;
  * @author James MacGlashan
  *
  */
-public class SinglePFTF implements TerminalFunction {
+public class SingleLETF implements TerminalFunction {
 
-	PropositionalFunction			pf;
-	boolean							terminateOnTrue;
+	LogicalExpression			le;
+	boolean						terminateOnTrue;
 	
 	
 	/**
-	 * Initializes the propositional function that will cause the state to be terminal when any Grounded version of
-	 * pf is true.
+	 * Initializes the logical expression that will cause the state to be terminal when any Grounded version of
+	 * le is true.
 	 * @param pf the propositional function that must have a true grounded version for the state to be terminal.
 	 */
-	public SinglePFTF(PropositionalFunction pf){
-		this.pf = pf;
+	public SingleLETF(LogicalExpression le){
+		this.le = le;
 		terminateOnTrue = true;
 	}
 	
@@ -37,8 +34,8 @@ public class SinglePFTF implements TerminalFunction {
 	 * @param pf the propositional function that must have a true grounded version for the state to be terminal.
 	 * @param terminateOnTrue when true requires a grounded version of pf to be true for the state to be terminal. When false requires a grounded version to be false to be terminal.
 	 */
-	public SinglePFTF(PropositionalFunction pf, boolean terminateOnTrue){
-		this.pf = pf;
+	public SingleLETF(LogicalExpression le, boolean terminateOnTrue){
+		this.le = le;
 		this.terminateOnTrue = terminateOnTrue;
 	}
 	
@@ -54,20 +51,15 @@ public class SinglePFTF implements TerminalFunction {
 	
 	@Override
 	public boolean isTerminal(State s) {
-//		List<GroundedProp> gps = s.getAllGroundedPropsFor(pf);
-		List<GroundedProp> gps = this.pf.getAllGroundedPropsForState(s);
-		if(terminateOnTrue){
-			for(GroundedProp gp : gps){
-				if(gp.isTrue(s)){
-					return true;
-				}
+		
+		if(terminateOnTrue) {
+			if(this.le.evaluateIn(s)){
+				return true;
 			}
 		}
-		else{
-			for(GroundedProp gp : gps){
-				if(!gp.isTrue(s)){
-					return true;
-				}
+		else {
+			if(!this.le.evaluateIn(s)){
+				return true;
 			}
 		}
 		

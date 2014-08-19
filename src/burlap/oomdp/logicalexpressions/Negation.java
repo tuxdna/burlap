@@ -6,25 +6,36 @@ import burlap.oomdp.core.State;
 
 public class Negation extends LogicalExpression {
 
+	public Negation() {
+		// Empty constructor in case child is not known yet (as in reading in from a file)
+	}
+	
+	public Negation(LogicalExpression childExpression) {
+		this.childExpressions.add(childExpression);
+	}
 	
 	
 	@Override
 	public LogicalExpression duplicate() {
-		// TODO Auto-generated method stub
-		return null;
+		return new Negation(this.childExpressions.get(0));
 	}
 
 	@Override
 	public boolean evaluateIn(State s) {
-		// TODO Auto-generated method stub
-		return false;
+		return (!this.childExpressions.get(0).evaluateIn(s));
 	}
 
 	@Override
-	protected void remapVariablesInThisExpression(
-			Map<String, String> fromToVariableMap) {
-		// TODO Auto-generated method stub
-
+	protected void remapVariablesInThisExpression(Map<String, String> fromToVariableMap) {
+		// Nothing necessary, not an atomic expression
+	}
+	
+	public void setChild(LogicalExpression child) {
+		this.childExpressions.add(child);
+	}
+	
+	public String toString() {
+		return "!" + this.childExpressions.get(0);
 	}
 
 }

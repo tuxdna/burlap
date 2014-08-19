@@ -57,7 +57,7 @@ public class ValueIteration extends ValueFunctionPlanner{
 	 * search is pruned at terminal states by setting this value to true. By default, it is false and the full
 	 * reachable state space is found
 	 */
-	protected boolean												stopReachabilityFromTerminalStates = false;
+	protected boolean												stopReachabilityFromTerminalStates = true;
 	
 	
 	protected boolean												hasRunVI = false;
@@ -112,6 +112,16 @@ public class ValueIteration extends ValueFunctionPlanner{
 			
 	}
 	
+	public int planFromStateAndCount(State initialState){
+		this.initializeOptionsForExpectationComputations();
+		if(this.performReachabilityFrom(initialState) || !this.hasRunVI){
+			return this.runVI();
+		}
+		
+		return 0;
+			
+	}
+	
 	@Override
 	public void resetPlannerResults(){
 		super.resetPlannerResults();
@@ -125,11 +135,13 @@ public class ValueIteration extends ValueFunctionPlanner{
 	 * in the past or a runtime exception will be thrown. The {@link #planFromState(State)} method will automatically call the {@link #performReachabilityFrom(State)} 
 	 * method first and then this if it hasn't been run.
 	 */
-	public void runVI(){
+	public int runVI(){
 		
 		if(!this.foundReachableStates){
 			throw new RuntimeException("Cannot run VI until the reachable states have been found. Use the planFromState or performReachabilityFrom method at least once before calling runVI.");
 		}
+		
+		int bellmanUpdates = 0;
 		
 		Set <StateHashTuple> states = mapToStateIndex.keySet();
 		
@@ -138,11 +150,10 @@ public class ValueIteration extends ValueFunctionPlanner{
 			
 			double delta = 0.;
 			for(StateHashTuple sh : states){
-				
 				double v = this.value(sh);
 				double maxQ = this.performBellmanUpdateOn(sh);
+				bellmanUpdates++;
 				delta = Math.max(Math.abs(maxQ - v), delta);
-				
 			}
 			
 			if(delta < this.maxDelta){
@@ -154,7 +165,7 @@ public class ValueIteration extends ValueFunctionPlanner{
 		DPrint.cl(this.debugCode, "Passes: " + i);
 		
 		this.hasRunVI = true;
-		
+		return bellmanUpdates;
 	}
 	
 	
@@ -165,8 +176,6 @@ public class ValueIteration extends ValueFunctionPlanner{
 	 * @return true if a reachability analysis had never been performed from this state; false otherwise.
 	 */
 	public boolean performReachabilityFrom(State si){
-		
-		
 		
 		StateHashTuple sih = this.stateHash(si);
 		//if this is not a new state and we are not required to perform a new reachability analysis, then this method does not need to do anything.
@@ -195,6 +204,7 @@ public class ValueIteration extends ValueFunctionPlanner{
 			
 			//do not need to expand from terminal states if set to prune
 			if(this.tf.isTerminal(sh.s) && stopReachabilityFromTerminalStates){
+				System.out.println("(ValueIteration)reached terminal");
 				continue;
 			}
 			

@@ -63,7 +63,7 @@ public class AffordanceValueIteration extends ValueFunctionPlanner{
 	 * search is pruned at terminal states by setting this value to true. By default, it is false and the full
 	 * reachable state space is found
 	 */
-	protected boolean												stopReachabilityFromTerminalStates = false;
+	protected boolean												stopReachabilityFromTerminalStates = true;
 	
 	protected AffordancesController									affController;
 	
@@ -117,6 +117,16 @@ public class AffordanceValueIteration extends ValueFunctionPlanner{
 			
 	}
 	
+	public int planFromStateAndCount(State initialState){
+		this.initializeOptionsForExpectationComputations();
+		if(this.performAffordanceReachabilityFrom(initialState)){
+			return this.runAffordanceVI();
+		}
+		
+		return 0;
+			
+	}
+	
 	@Override
 	public void resetPlannerResults(){
 		super.resetPlannerResults();
@@ -129,11 +139,13 @@ public class AffordanceValueIteration extends ValueFunctionPlanner{
 	 * in the past or a runtime exception will be thrown. The {@link #planFromState(State)} method will automatically call the {@link #performAffordanceReachabilityFrom(State)} 
 	 * method first and then this if it hasn't been run.
 	 */
-	public void runAffordanceVI(){
+	public int runAffordanceVI(){
 		
 		if(!this.foundReachableStates){
 			throw new RuntimeException("Cannot run VI until the reachable states have been found. Use planFromState method at least once or instead.");
 		}
+		
+		int bellmanUpdates = 0;
 		
 		Set <StateHashTuple> states = mapToStateIndex.keySet();
 		
@@ -144,7 +156,9 @@ public class AffordanceValueIteration extends ValueFunctionPlanner{
 			for(StateHashTuple sh : states){
 				
 				double v = this.value(sh);
-				double maxQ = this.performBellmanUpdateOn(sh);
+//				double maxQ = this.performBellmanUpdateOn(sh.s);
+				double maxQ = this.performAffordanceBellmanUpdateOn(sh, this.affController);
+				bellmanUpdates++;
 				delta = Math.max(Math.abs(maxQ - v), delta);
 				
 			}
@@ -157,6 +171,7 @@ public class AffordanceValueIteration extends ValueFunctionPlanner{
 		
 		DPrint.cl(this.debugCode, "Passes: " + i);
 		
+		return bellmanUpdates;
 	}
 	
 	
@@ -195,6 +210,7 @@ public class AffordanceValueIteration extends ValueFunctionPlanner{
 			
 			//do not need to expand from terminal states if set to prune
 			if(this.tf.isTerminal(sh.s) && stopReachabilityFromTerminalStates){
+				System.out.println("(AffordanceValueIteration)reached terminal");
 				continue;
 			}
 			
@@ -234,28 +250,29 @@ public class AffordanceValueIteration extends ValueFunctionPlanner{
 		List <ActionTransitions> allTransitions = transitionDynamics.get(sh);
 		
 		if(allTransitions == null){
-			//need to create them
+			// Need to create them
 			
-			//indicate how this state is stored
+			// Indicate how this state is stored
 			mapToStateIndex.put(sh, sh);
 			
 			
-			//first get all grounded actions for this state
+			// First get all grounded actions for this state
 			List <AbstractGroundedAction> gas = new ArrayList<AbstractGroundedAction>();
 			for(Action a : actions){
-				gas.addAll(sh.s.getAllGroundedActionsFor(a));
+				gas.addAll(a.getAllApplicableGroundedActions(sh.s));
 			}
 			
+			// Now filter out bad actions using affordace knowledge base
 			List<AbstractGroundedAction> prunedActions = this.affController.filterIrrelevantActionsInState(gas, sh.s);
 
-			//now add transitions
+			// Now add transitions
 			allTransitions = new ArrayList<ActionTransitions>(gas.size());
 			for(AbstractGroundedAction ga : prunedActions){
 				ActionTransitions at = new ActionTransitions(sh.s, (GroundedAction)ga, hashingFactory);
 				allTransitions.add(at);
 			}
 			
-			//set it if we're caching
+			// Set it if we're caching
 			if(this.useCachedTransitions){
 				transitionDynamics.put(sh, allTransitions);
 			}

@@ -5,6 +5,7 @@ package burlap.behavior.singleagent.planning.stochastic.rtdp;
 
 import burlap.behavior.affordances.AffordancesController;
 import burlap.behavior.singleagent.ValueFunctionInitialization;
+import burlap.behavior.singleagent.planning.ValueFunctionPlanner;
 import burlap.behavior.singleagent.planning.commonpolicies.AffordanceGreedyQPolicy;
 import burlap.behavior.singleagent.planning.commonpolicies.GreedyQPolicy;
 import burlap.behavior.statehashing.StateHashFactory;
@@ -13,6 +14,7 @@ import burlap.debugtools.DPrint;
 import burlap.oomdp.core.Domain;
 import burlap.oomdp.core.State;
 import burlap.oomdp.core.TerminalFunction;
+import burlap.oomdp.logicalexpressions.LogicalExpression;
 import burlap.oomdp.singleagent.GroundedAction;
 import burlap.oomdp.singleagent.RewardFunction;
 
@@ -46,23 +48,36 @@ public class AffordanceRTDP extends RTDP {
 		this.maxDelta = maxDelta;
 		this.maxDepth = maxDepth;
 		this.rollOutPolicy = new AffordanceGreedyQPolicy(affController, this);
-		
+
 		this.valueInitializer = new ValueFunctionInitialization.ConstantValueFunctionInitialization(vInit);
 		
 	}
 	
-	public void planFromState(State initialState) {
-		this.affordanceRTDP(initialState);
+	public AffordanceRTDP(Domain domain, RewardFunction rf, TerminalFunction tf, double gamma, StateHashFactory hashingFactory, double vInit, int numRollouts, double maxDelta, int maxDepth, AffordancesController affController, int minRolloutsRequiredForConvergance){
+		super(domain, rf, tf, gamma,hashingFactory, vInit, numRollouts, maxDelta, maxDepth);
+		this.VFPInit(domain, rf, tf, gamma, hashingFactory);
+		this.affController = affController;
+		this.numRollouts = numRollouts;
+		this.maxDelta = maxDelta;
+		this.maxDepth = maxDepth;
+		this.rollOutPolicy = new AffordanceGreedyQPolicy(affController, this);
+		this.valueInitializer = new ValueFunctionInitialization.ConstantValueFunctionInitialization(vInit);
+		this.minNumRolloutsWithSmallValueChange = minRolloutsRequiredForConvergance;
+	}
+	
+	public int planFromStateAndCount(State initialState) {
+		return this.affordanceRTDP(initialState);
 	}
 
 	/**
 	 * Runs Affordance Aware RTDP
 	 * @param initialState
 	 */
-	private void affordanceRTDP(State initialState) {
+	private int affordanceRTDP(State initialState) {
 
 		int totalStates = 0;
 		int consecutiveSmallDeltas = 0;
+		int numBellmanUpdates = 0;
 
 		for(int i = 0; i < numRollouts; i++){
 			
@@ -78,10 +93,13 @@ public class AffordanceRTDP extends RTDP {
 				
 				// Select an action
 				GroundedAction ga = (GroundedAction)this.rollOutPolicy.getAction(curState);
-
+				
+//				System.out.println("(affRTDP)Action : " + ga.actionName());
+				
 				// Update this state's value
 				double curV = this.value(sh);
-				double nV = this.performBellmanUpdateOn(sh);
+				double nV = ((ValueFunctionPlanner)this).performAffordanceBellmanUpdateOn(sh, affController);
+				numBellmanUpdates++;
 				delta = Math.max(Math.abs(nV - curV), delta); 
 
 				// Take the action
@@ -103,5 +121,8 @@ public class AffordanceRTDP extends RTDP {
 				consecutiveSmallDeltas = 0;
 			}
 		}
+		
+		return numBellmanUpdates;
 	}
+	
 }

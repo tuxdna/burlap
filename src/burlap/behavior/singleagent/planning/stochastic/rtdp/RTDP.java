@@ -65,7 +65,7 @@ public class RTDP extends ValueFunctionPlanner {
 	 * RTDP will be delcared "converged" if there are this many consecutive policy rollouts in which the value function change is smaller than the maxDelta value.
 	 * The default value is 10.
 	 */
-	protected int						minNumRolloutsWithSmallValueChange = 100;
+	protected int						minNumRolloutsWithSmallValueChange = 10;
 	
 	
 	/**
@@ -190,27 +190,36 @@ public class RTDP extends ValueFunctionPlanner {
 	
 	@Override
 	public void planFromState(State initialState) {
-		
 		if(!useBatch){
 			this.normalRTDP(initialState);
 		}
 		else{
 			this.batchRTDP(initialState);
 		}
-
 	}
 	
+	public int planFromStateAndCount(State initialState) {
+		
+		if(!useBatch){
+			return this.normalRTDP(initialState);
+		}
+		else{
+			return this.batchRTDP(initialState);
+		}
 
+	}
 
 	
 	/**
 	 * Runs normal RTDP in which bellman updates are performed after each action selection.
 	 * @param initiaState the initial state from which to plan
+	 * @return 
 	 */
-	protected void normalRTDP(State initialState){
+	protected int normalRTDP(State initialState){
 		
 		int totalStates = 0;
 		int consecutiveSmallDeltas = 0;
+		int numBellmanUpdates = 0;
 		for(int i = 0; i < numRollouts; i++){
 			
 			State curState = initialState;
@@ -223,9 +232,12 @@ public class RTDP extends ValueFunctionPlanner {
 				//select an action
 				GroundedAction ga = (GroundedAction)this.rollOutPolicy.getAction(curState);
 				
+//				System.out.println("(rtdp)Action : " + ga.actionName());
+				
 				//update this state's value
 				double curV = this.value(sh);
 				double nV = this.performBellmanUpdateOn(sh);
+				numBellmanUpdates++;
 				delta = Math.max(Math.abs(nV - curV), delta); 
 				
 				//take the action
@@ -250,17 +262,20 @@ public class RTDP extends ValueFunctionPlanner {
 			
 		}
 		
+		return numBellmanUpdates;
+		
 	}
 	
 	
 	/**
 	 * Performs Bellman updates only after a rollout is complete and in reverse order
 	 * @param initialState the initial state from which to plan
+	 * @return 
 	 */
-	protected void batchRTDP(State initialState){
+	protected int batchRTDP(State initialState){
 		
 		int totalStates = 0;
-		
+		int numBellmanUpdates = 0;
 		int consecutiveSmallDeltas = 0;
 		for(int i = 0; i < numRollouts; i++){
 			
@@ -271,6 +286,7 @@ public class RTDP extends ValueFunctionPlanner {
 			}
 			
 			double delta = this.performOrderedBellmanUpdates(orderedStates);
+			numBellmanUpdates++;
 			totalStates += orderedStates.size();
 			DPrint.cl(debugCode, "Pass: " + i + "; Num states: " + orderedStates.size() + " (total: " + totalStates + ")");
 			
@@ -285,7 +301,7 @@ public class RTDP extends ValueFunctionPlanner {
 			}
 		}
 		
-		
+		return numBellmanUpdates;
 	}
 	
 	

@@ -4,18 +4,15 @@
 package burlap.behavior.affordances;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 
-import cc.mallet.types.Dirichlet;
 import burlap.oomdp.core.AbstractGroundedAction;
-import burlap.oomdp.core.GroundedProp;
-import burlap.oomdp.core.PropositionalFunction;
-import burlap.oomdp.core.State;
 import burlap.oomdp.logicalexpressions.LogicalExpression;
-import burlap.oomdp.logicalexpressions.PFAtom;
+import cc.mallet.types.Dirichlet;
 
 /**
  * @author dabel
@@ -27,10 +24,10 @@ public class SoftAffordance extends Affordance {
 	private Collection<AbstractGroundedAction> prunedActions;
 	private HashMap<AbstractGroundedAction, Integer> actionCounts;
 	private int[] actionNumCounts;
-	private Random r = new Random();
 	private Dirichlet actionDistr;
 	private Dirichlet actionNumDistr;
-	private double dirichletHyperParam = 1.0;
+	private double dirichletHyperParam = 0.01;
+
 	
 	/**
 	 * Constructor SoftAffordances. Maps a <Predicate,GoalDescription> pair to a subset of the action space
@@ -44,7 +41,9 @@ public class SoftAffordance extends Affordance {
 			this.allActions = actions;
 			
 			initCounts();
-			postProcess();
+			// I don't think we can postProcess and sample right away since the action counts haven't been set yet.
+//			postProcess();
+//			this.sampleNewLiftedActionSet();
 	}
 	
 	/**
@@ -55,33 +54,23 @@ public class SoftAffordance extends Affordance {
 		
 		int[] sizes = this.actionNumDistr.drawObservation(1);
 		int n = -1;
-		
+
 		// Loop over sizes until we find the one that was sampled
 		for (int i = 0; i < sizes.length; i++) {
 			if (sizes[i] > 0) {
-				n = i;
+				n = i + 1; // i + 1 since 0:(k-1) set sizes indicates sets of size 1:k
 				break;
 			}
 		}
-		
+
 		// Sample 'n' actions from the dirichletMultinomial
 		List<AbstractGroundedAction> selectedActions = new ArrayList<AbstractGroundedAction>();
-		while(selectedActions.size() < n) {
-			int[] actIndices = this.actionDistr.drawObservation(1);
-			AbstractGroundedAction act = null;
-			
-			// Loop over action indices until we find the one that was sampled
-			for (int i = 0; i < actIndices.length; i++) {
-				if (actIndices[i] > 0) {
-					act = this.allActions.get(i);
-					break;
-				}
+		int[] actIndices = this.actionDistr.drawObservation(n);
+		
+		for(int i = 0; i < actIndices.length; i++) {
+			if(i > 0) {
+				selectedActions.add(this.allActions.get(i));
 			}
-
-			if (!selectedActions.contains(act)) {
-				selectedActions.add(act);
-			}
-
 		}
 
 		this.prunedActions = selectedActions;
@@ -101,6 +90,7 @@ public class SoftAffordance extends Affordance {
 		for (int i = 0; i <= this.actionCounts.size(); i++) {
 			this.actionNumCounts[i] = 0;
 		}
+		
 	}
 
 	
@@ -114,7 +104,7 @@ public class SoftAffordance extends Affordance {
 		for (int i = 0; i < alpha.length; i++) {
 			alpha[i] += (double)(actCounts.get(i));
 		}
-		
+
 		this.actionDistr = new Dirichlet(alpha);
 		
 		double[] beta = dirichletHyper(this.actionCounts.size(), dirichletHyperParam);
@@ -147,13 +137,21 @@ public class SoftAffordance extends Affordance {
 		return this.allActions;
 	}
 	
+	public HashMap<AbstractGroundedAction, Integer> getActionCounts() {
+		return actionCounts;
+	}
+	
+	public int[] getActionSetSizeCounts() {
+		return actionNumCounts;
+	}
+	
 	// --- Mutators ---
 	
 	public void setActionCounts(HashMap<AbstractGroundedAction, Integer> actionCounts) {
 		this.actionCounts = actionCounts;
 	}
 
-	public void setActionNumCounts(int[] actionNumCounts) {
+	public void setActionNumCounts(int[] actionNumCounts) {		
 		this.actionNumCounts = actionNumCounts;
 	}
 	
@@ -180,7 +178,7 @@ public class SoftAffordance extends Affordance {
 	}
 	
 	public String toString() {
-		return this.preCondition.toString();
+		return this.preCondition.toString() + "," + this.goalDescription.toString();
 	}
 	
 	public String toFile() {
