@@ -2,7 +2,9 @@ package burlap.behavior.affordances;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import burlap.oomdp.core.AbstractGroundedAction;
 import burlap.oomdp.core.ObjectInstance;
@@ -53,43 +55,35 @@ public class AffordancesController {
 	 */
 	public List<AbstractGroundedAction> getPrunedActionSetForState(State s) {
 		
+		if (this.currentGoal == null) {
+			throw new RuntimeException("The current goal has not been set. Actions cannot be pruned.");
+		}
+		
 		// If we're caching actions and we've already seen this state
 		if (cacheActionSets && stateActionHash.containsKey(s)) {
 			return stateActionHash.get(s);
 		}
 		
-		List<AbstractGroundedAction> actions = new ArrayList<AbstractGroundedAction>();
+		Set<AbstractGroundedAction> actions = new HashSet<AbstractGroundedAction>();
 		for(AffordanceDelegate aff : this.affordances){
 			// If affordance is active
 			if(aff.primeAndCheckIfActiveInState(s, currentGoal)){
 				aff.resampleActionSet();
-				for(AbstractGroundedAction aga : aff.listedActionSet) {
-					// If that action wasn't added yet then add it
-					if(!actions.contains(aga)) {
-						actions.add(aga);
-					}
-				}
+				actions.addAll(aff.listedActionSet);
 			}
-			
 		}
 		
-//		System.out.println("(AffordancesController) Affordance Action Set: ");
-//		for(AbstractGroundedAction aga : actions) {
-//			System.out.println("\t(AffordancesController) action: " + aga.actionName());
-//		}
-//		System.out.println("\n");
-		
 		if (actions.size() == 0) {
-			// return full action set
 //			System.out.println("(AffordancesController) EMPTY ACTION SET");
 		}
 		
+		List<AbstractGroundedAction> actionList = new ArrayList<AbstractGroundedAction>(actions);
 		// If we're caching, add the action set we just computed
 		if(cacheActionSets) {
-			stateActionHash.put(s, actions);
+			stateActionHash.put(s, actionList);
 		}
 		
-		return actions;
+		return actionList;
 	}
 	
 	/**
@@ -99,6 +93,10 @@ public class AffordancesController {
 	 * @return: A list of AbstractGroundedActions, the pruned action set.
 	 */
 	public List<AbstractGroundedAction> filterIrrelevantActionsInState(List<AbstractGroundedAction> actions, State s){
+		
+		if (this.currentGoal == null) {
+			throw new RuntimeException("The current goal has not been set. Actions cannot be pruned.");
+		}
 		
 		// If we're caching actions and we've already seen this state
 		if (cacheActionSets && stateActionHash.containsKey(s)) {
