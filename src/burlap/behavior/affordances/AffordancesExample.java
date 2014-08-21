@@ -39,10 +39,10 @@ import burlap.oomdp.singleagent.common.UniformCostRF;
 public class AffordancesExample {
 
 	// Create collections for action lists
-	private ArrayList<AbstractGroundedAction> northActions = new ArrayList<AbstractGroundedAction>();;
-	private ArrayList<AbstractGroundedAction> southActions = new ArrayList<AbstractGroundedAction>();;
-	private ArrayList<AbstractGroundedAction> eastActions = new ArrayList<AbstractGroundedAction>();;
-	private ArrayList<AbstractGroundedAction> westActions = new ArrayList<AbstractGroundedAction>();;
+	private ArrayList<AbstractGroundedAction> northActions = new ArrayList<AbstractGroundedAction>();
+	private ArrayList<AbstractGroundedAction> southActions = new ArrayList<AbstractGroundedAction>();
+	private ArrayList<AbstractGroundedAction> eastActions = new ArrayList<AbstractGroundedAction>();
+	private ArrayList<AbstractGroundedAction> westActions = new ArrayList<AbstractGroundedAction>();
 	
 	// Pointers to action objects in the domain
 	private AbstractGroundedAction northAction;
@@ -100,13 +100,13 @@ public class AffordancesExample {
 		this.northActions.add(this.westAction);
 		
 		// SOUTH
-		this.southActions = (ArrayList<AbstractGroundedAction>) northActions.clone();
+		this.southActions = new ArrayList<AbstractGroundedAction>(this.northActions);
 		
 		// EAST
-		this.eastActions = (ArrayList<AbstractGroundedAction>) northActions.clone();
+		this.eastActions = new ArrayList<AbstractGroundedAction>(this.northActions);
 		
 		// WEST
-		this.westActions = (ArrayList<AbstractGroundedAction>) northActions.clone();
+		this.westActions = new ArrayList<AbstractGroundedAction>(this.northActions);
 	}
 	
 	/**
