@@ -9,8 +9,6 @@ import javax.management.RuntimeErrorException;
 import burlap.behavior.affordances.AffordancesController;
 import burlap.behavior.singleagent.Policy;
 import burlap.behavior.singleagent.QValue;
-import burlap.behavior.singleagent.Policy.ActionProb;
-import burlap.behavior.singleagent.Policy.PolicyUndefinedException;
 import burlap.behavior.singleagent.planning.OOMDPPlanner;
 import burlap.behavior.singleagent.planning.PlannerDerivedPolicy;
 import burlap.behavior.singleagent.planning.QComputablePlanner;

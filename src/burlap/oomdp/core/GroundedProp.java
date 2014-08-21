@@ -1,6 +1,5 @@
 package burlap.oomdp.core;
 
-import burlap.behavior.affordances.AffordanceDelegate;
 
 
 /**

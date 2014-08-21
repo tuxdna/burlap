@@ -1,13 +1,8 @@
 package burlap.oomdp.singleagent.common;
 
-import java.util.HashMap;
-import java.util.Hashtable;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
-import burlap.oomdp.core.GroundedProp;
-import burlap.oomdp.core.PropositionalFunction;
 import burlap.oomdp.core.State;
 import burlap.oomdp.logicalexpressions.LogicalExpression;
 import burlap.oomdp.singleagent.GroundedAction;

@@ -21,9 +21,7 @@ public class LogicalExpressionParser {
 		List<String> stack = new ArrayList<String>();
 		List<LogicalExpression> children = new ArrayList<LogicalExpression>();
 		List<LogicalExpression> leStack = new ArrayList<LogicalExpression>();
-		
-		LogicalExpression root = new PFAtom();
-		
+			
 		for (int i = 0; i < this.tokens.length; i++) {
 			LogicalExpression localRoot = new PFAtom();
 			String token = this.tokens[i];

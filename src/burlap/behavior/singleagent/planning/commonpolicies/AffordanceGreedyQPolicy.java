@@ -12,7 +12,6 @@ import burlap.behavior.singleagent.planning.QComputablePlanner;
 import burlap.behavior.singleagent.planning.ValueFunctionPlanner;
 import burlap.oomdp.core.AbstractGroundedAction;
 import burlap.oomdp.core.State;
-import burlap.oomdp.logicalexpressions.LogicalExpression;
 
 /**
  * A greedy policy that breaks ties by randomly choosing an action amongst the tied actions. This class requires a QComputablePlanner.

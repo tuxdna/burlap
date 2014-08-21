@@ -4,11 +4,9 @@
 package burlap.behavior.affordances;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
 
 import burlap.oomdp.core.AbstractGroundedAction;
 import burlap.oomdp.logicalexpressions.LogicalExpression;
@@ -21,7 +19,6 @@ import cc.mallet.types.Dirichlet;
 public class SoftAffordance extends Affordance {
 
 	private List<AbstractGroundedAction> allActions;
-	private Collection<AbstractGroundedAction> prunedActions;
 	private HashMap<AbstractGroundedAction, Integer> actionCounts;
 	private int[] actionNumCounts;
 	private Dirichlet actionDistr;
@@ -73,7 +70,6 @@ public class SoftAffordance extends Affordance {
 			}
 		}
 
-		this.prunedActions = selectedActions;
 		return selectedActions;
 	}
 		

@@ -7,10 +7,8 @@ import java.util.List;
 import java.util.Set;
 
 import burlap.oomdp.core.AbstractGroundedAction;
-import burlap.oomdp.core.ObjectInstance;
 import burlap.oomdp.core.State;
 import burlap.oomdp.logicalexpressions.LogicalExpression;
-import burlap.oomdp.singleagent.Action;
 
 public class AffordancesController {
 
@@ -18,7 +16,6 @@ public class AffordancesController {
 	public LogicalExpression currentGoal;
 	protected HashMap<State,List<AbstractGroundedAction>> stateActionHash = new HashMap<State,List<AbstractGroundedAction>>();
 	protected boolean cacheActionSets = false; // True when we only sample action sets each time we enter a state, then cache for later use. 
-	private List<AbstractGroundedAction> allActions;
 	
 	public AffordancesController(List<AffordanceDelegate> affs) {
 		this.affordances = affs;

@@ -71,22 +71,22 @@ public class AffordancesExample {
 		// ---- GET ACTIONS ----
 
 		// NORTH
-		Action northAct = domain.getAction(gwdg.ACTIONNORTH);
+		Action northAct = domain.getAction(GridWorldDomain.ACTIONNORTH);
 		String[] northFreeParams = AffordanceDelegate.makeFreeVarListFromObjectClasses(northAct.getParameterClasses());
 		this.northAction = new GroundedAction(northAct, northFreeParams);
 		
 		// SOUTH
-		Action southAct = domain.getAction(gwdg.ACTIONSOUTH);
+		Action southAct = domain.getAction(GridWorldDomain.ACTIONSOUTH);
 		String[] southFreeParams = AffordanceDelegate.makeFreeVarListFromObjectClasses(southAct.getParameterClasses());
 		this.southAction = new GroundedAction(southAct, southFreeParams);
 		
 		// EAST
-		Action eastAct = domain.getAction(gwdg.ACTIONEAST);
+		Action eastAct = domain.getAction(GridWorldDomain.ACTIONEAST);
 		String[] eastFreeParams = AffordanceDelegate.makeFreeVarListFromObjectClasses(eastAct.getParameterClasses());
 		this.eastAction = new GroundedAction(eastAct, eastFreeParams);
 
 		// WEST
-		Action westAct = domain.getAction(gwdg.ACTIONWEST);
+		Action westAct = domain.getAction(GridWorldDomain.ACTIONWEST);
 		String[] westFreeParams = AffordanceDelegate.makeFreeVarListFromObjectClasses(westAct.getParameterClasses());
 		this.westAction = new GroundedAction(westAct, westFreeParams);
 		
@@ -117,25 +117,25 @@ public class AffordancesExample {
 	 */
 	public void setupPFAtoms(Domain domain, GridWorldDomain gwdg, State initialState) {
 		// NORTH
-		PropositionalFunction northProp = domain.getPropFunction(gwdg.PFEMPTYNORTH);
+		PropositionalFunction northProp = domain.getPropFunction(GridWorldDomain.PFEMPTYNORTH);
 		String[] northFreeParams = AffordanceDelegate.makeFreeVarListFromObjectClasses(northProp.getParameterClasses());
 		GroundedProp northGroundedProp = new GroundedProp(northProp, northFreeParams);
 		this.northPFAtom = new PFAtom(northGroundedProp);
 		
 		// SOUTH
-		PropositionalFunction southProp = domain.getPropFunction(gwdg.PFEMPTYSOUTH);
+		PropositionalFunction southProp = domain.getPropFunction(GridWorldDomain.PFEMPTYSOUTH);
 		String[] southFreeParams = AffordanceDelegate.makeFreeVarListFromObjectClasses(southProp.getParameterClasses());
 		GroundedProp southGroundedProp = new GroundedProp(southProp, southFreeParams);
 		this.southPFAtom = new PFAtom(southGroundedProp);
 		
 		// EAST
-		PropositionalFunction eastProp = domain.getPropFunction(gwdg.PFEMPTYEAST);
+		PropositionalFunction eastProp = domain.getPropFunction(GridWorldDomain.PFEMPTYEAST);
 		String[] eastFreeParams = AffordanceDelegate.makeFreeVarListFromObjectClasses(eastProp.getParameterClasses());
 		GroundedProp eastGroundedProp = new GroundedProp(eastProp, eastFreeParams);
 		this.eastPFAtom = new PFAtom(eastGroundedProp);
 		
 		// WEST
-		PropositionalFunction westProp = domain.getPropFunction(gwdg.PFEMPTYWEST);
+		PropositionalFunction westProp = domain.getPropFunction(GridWorldDomain.PFEMPTYWEST);
 		String[] westFreeParams = AffordanceDelegate.makeFreeVarListFromObjectClasses(westProp.getParameterClasses());
 		GroundedProp westGroundedProp = new GroundedProp(westProp, westFreeParams);
 		this.westPFAtom = new PFAtom(westGroundedProp);
@@ -155,32 +155,32 @@ public class AffordancesExample {
 	 */
 	public void setupPFAtomsGrounded(Domain domain, GridWorldDomain gwdg, State initialState) {
 		// NORTH
-		PropositionalFunction northProp = domain.getPropFunction(gwdg.PFEMPTYNORTH);
-		List<GroundedProp> northGroundedProps = initialState.getAllGroundedPropsFor(northProp);
+		PropositionalFunction northProp = domain.getPropFunction(GridWorldDomain.PFEMPTYNORTH);
+		List<GroundedProp> northGroundedProps = northProp.getAllGroundedPropsForState(initialState);
 		GroundedProp northGroundedProp = northGroundedProps.get(0);
 		this.northPFAtom = new PFAtom(northGroundedProp);
 		
 		// SOUTH
-		PropositionalFunction southProp = domain.getPropFunction(gwdg.PFEMPTYSOUTH);
-		List<GroundedProp> southGroundedProps = initialState.getAllGroundedPropsFor(southProp);
+		PropositionalFunction southProp = domain.getPropFunction(GridWorldDomain.PFEMPTYSOUTH);
+		List<GroundedProp> southGroundedProps = southProp.getAllGroundedPropsForState(initialState);
 		GroundedProp southGroundedProp = southGroundedProps.get(0);
 		this.southPFAtom = new PFAtom(southGroundedProp);
 		
 		// EAST
-		PropositionalFunction eastProp = domain.getPropFunction(gwdg.PFEMPTYEAST);
-		List<GroundedProp> eastGroundedProps = initialState.getAllGroundedPropsFor(eastProp);
+		PropositionalFunction eastProp = domain.getPropFunction(GridWorldDomain.PFEMPTYEAST);
+		List<GroundedProp> eastGroundedProps = eastProp.getAllGroundedPropsForState(initialState);
 		GroundedProp eastGroundedProp = eastGroundedProps.get(0);
 		this.eastPFAtom = new PFAtom(eastGroundedProp);
 		
 		// WEST
-		PropositionalFunction westProp = domain.getPropFunction(gwdg.PFEMPTYWEST);
-		List<GroundedProp> westGroundedProps = initialState.getAllGroundedPropsFor(westProp);
+		PropositionalFunction westProp = domain.getPropFunction(GridWorldDomain.PFEMPTYWEST);
+		List<GroundedProp> westGroundedProps = westProp.getAllGroundedPropsForState(initialState);
 		GroundedProp westGroundedProp = westGroundedProps.get(0);
 		this.westPFAtom = new PFAtom(westGroundedProp);
 		
 		// GOAL
 		PropositionalFunction goalProp = domain.getPropFunction(GridWorldDomain.PFATLOCATION);
-		List<GroundedProp> goalGroundedProps = initialState.getAllGroundedPropsFor(goalProp);
+		List<GroundedProp> goalGroundedProps = goalProp.getAllGroundedPropsForState(initialState);
 		GroundedProp goalGroundedProp = goalGroundedProps.get(0);
 		this.goalPFAtom = new PFAtom(goalGroundedProp);
 	}
