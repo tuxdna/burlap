@@ -27,7 +27,7 @@ import burlap.oomdp.singleagent.RewardFunction;
 
 /**
  * This class extends the OOMDP planner to define a class of planners that compute state value functions
- * using the tabular Bellman update, such as ValueIteraiton. It defines data members for storing hashed transition dynamics
+ * using the tabular Bellman update, such as ValueIteration. It defines data members for storing hashed transition dynamics
  * (so that they can be quickly retrieved without multiple calls to the action transition generation) and a map
  * from states to their values. It also adds support for the QComputable planner which can return
  * Q-values by using the transition dynamics and the stored value function.
