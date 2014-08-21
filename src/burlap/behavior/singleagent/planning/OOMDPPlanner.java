@@ -119,6 +119,7 @@ public abstract class OOMDPPlanner {
 				Option o = (Option)a;
 				o.keepTrackOfRewardWith(rf, gamma);
 				o.setExernalTermination(tf);
+				o.setExpectationHashingFactory(hashingFactory);
 				if(!(this.rf instanceof OptionEvaluatingRF)){
 					this.rf = new OptionEvaluatingRF(this.rf);
 				}
@@ -209,6 +210,21 @@ public abstract class OOMDPPlanner {
 		this.tf = tf;
 	}
 
+	/**
+	 * Returns gamma, the discount factor used by this planner
+	 * @return gamma, the discount factor used by this planner
+	 */
+	public double getGamme(){
+		return this.gamma;
+	}
+	
+	/**
+	 * Sets gamma, the discount factor used by this planner
+	 * @param gamma the discount factor used by this planner
+	 */
+	public void setGamma(double gamma){
+		this.gamma = gamma;
+	}
 
 	/**
 	 * Sets the debug code to be used by calls to {@link burlap.debugtools.DPrint}
