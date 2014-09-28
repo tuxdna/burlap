@@ -96,6 +96,12 @@ public class GradientDescentSarsaLam extends OOMDPPlanner implements QComputable
 	
 	
 	/**
+	 * Whether the learning rate polls should be based on the VFA state features or OO-MDP state. If true, then based on feature VFA state features; if false then the OO-MDP state.
+	 * Default is to use feature ids.
+	 */
+	protected boolean												useFeatureWiseLearningRate = true;
+	
+	/**
 	 * The minimum eligibility value of a trace that will cause it to be updated
 	 */
 	protected double												minEligibityForUpdate = 0.01;
@@ -129,7 +135,10 @@ public class GradientDescentSarsaLam extends OOMDPPlanner implements QComputable
 	protected boolean												shouldAnnotateOptions = true;
 	
 	
-	
+	/**
+	 * The total number of learning steps performed by this agent.
+	 */
+	protected int													totalNumberOfSteps = 0;
 	
 	
 	/**
@@ -196,28 +205,28 @@ public class GradientDescentSarsaLam extends OOMDPPlanner implements QComputable
 
 	
 	/**
-	 * Initializes SARSA(\lambda) By default the agent will only save the last learning episode and a call to the {@link planFromState(State)} method
+	 * Initializes SARSA(\lambda) By default the agent will only save the last learning episode and a call to the {@link #planFromState(State)} method
 	 * will cause the planner to use only one episode for planning; this should probably be changed to a much larger value if you plan on using this
 	 * algorithm as a planning algorithm.
 	 * @param domain the domain in which to learn
 	 * @param rf the reward function
 	 * @param tf the terminal function
 	 * @param gamma the discount factor
-	 * @param ValueFunctionApproximation the value function approximation method to use for estimate Q-values
+	 * @param vfa the value function approximation method to use for estimate Q-values
 	 * @param learningRate the learning rate
 	 * @param learningPolicy the learning policy to follow during a learning episode.
 	 * @param maxEpisodeSize the maximum number of steps the agent will take in an episode before terminating
 	 * @param lambda specifies the strength of eligibility traces (0 for one step, 1 for full propagation)
 	 */
 	protected void GDSLInit(Domain domain, RewardFunction rf, TerminalFunction tf, double gamma, ValueFunctionApproximation vfa, 
-			double learningRate, Policy learningPolicy, int maxEpisodeSize, double lamda){
+			double learningRate, Policy learningPolicy, int maxEpisodeSize, double lambda){
 		
 		this.plannerInit(domain, rf, tf, gamma, null);
 		this.vfa = vfa;
 		this.learningRate = new ConstantLR(learningRate);
 		this.learningPolicy = learningPolicy;
 		this.maxEpisodeSize = maxEpisodeSize;
-		this.lambda = lamda;
+		this.lambda = lambda;
 		
 		numEpisodesToStore = 1;
 		episodeHistory = new LinkedList<EpisodeAnalysis>();
@@ -235,6 +244,14 @@ public class GradientDescentSarsaLam extends OOMDPPlanner implements QComputable
 	 */
 	public void setLearningRate(LearningRate lr){
 		this.learningRate = lr;
+	}
+	
+	/**
+	 * Sets whether learning rate polls should be based on the VFA state feature ids, or the OO-MDP state. Default is to use feature ids. 
+	 * @param useFeatureWiseLearningRate if true then learning rate polls are based on VFA state feature ids; if false then they are based on the OO-MDP state object.
+	 */
+	public void setUseFeatureWiseLearningRate(boolean useFeatureWiseLearningRate){
+		this.useFeatureWiseLearningRate = useFeatureWiseLearningRate;
 	}
 	
 	/**
@@ -410,14 +427,20 @@ public class GradientDescentSarsaLam extends OOMDPPlanner implements QComputable
 			}
 			
 			
-			double learningRate = this.learningRate.pollLearningRate(curState, action);
+			double learningRate = 0.;
+			if(!this.useFeatureWiseLearningRate){
+				learningRate = this.learningRate.pollLearningRate(this.totalNumberOfSteps, curState, action);
+			}
+			
 			
 			//update all traces
 			Set <Integer> deletedSet = new HashSet<Integer>();
 			for(EligibilityTraceVector et : traces.values()){
 				
 				int weightId = et.weight.weightId();
-				
+				if(this.useFeatureWiseLearningRate){
+					learningRate = this.learningRate.pollLearningRate(this.totalNumberOfSteps, et.weight.weightId());
+				}
 				
 				
 				et.eligibilityValue += gradient.getPartialDerivative(weightId);
@@ -443,6 +466,10 @@ public class GradientDescentSarsaLam extends OOMDPPlanner implements QComputable
 				if(!traces.containsKey(fw)){
 					
 					//then it's new and we need to add it
+					if(this.useFeatureWiseLearningRate){
+						learningRate = this.learningRate.pollLearningRate(this.totalNumberOfSteps, weightId);
+					}
+					
 					EligibilityTraceVector et = new EligibilityTraceVector(fw, gradient.getPartialDerivative(weightId));
 					double newWeight = fw.weightValue() + learningRate*delta*et.eligibilityValue;
 					fw.setWeight(newWeight);
@@ -472,6 +499,8 @@ public class GradientDescentSarsaLam extends OOMDPPlanner implements QComputable
 			action = nextAction;
 			curApprox = nextApprox;
 			allCurApproxResults = allNextApproxResults;
+			
+			this.totalNumberOfSteps++;
 			
 		}
 		

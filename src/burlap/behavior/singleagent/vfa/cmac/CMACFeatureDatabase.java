@@ -22,7 +22,10 @@ import burlap.oomdp.singleagent.GroundedAction;
 
 
 /**
- * A feature database using CMACs [1] AKA Tiling Coding over OO-MDP state attributes. The CMAC can be set to define
+ * A feature database using CMACs [1] AKA Tiling Coding over OO-MDP states. This version of CMAC operates directly on the OO-MDP 
+ * representation providing object identifier invariance. If you do not need object identifier invariance, consider
+ * using the {@link FVCMACFeatureDatabase} implementation instead, which is slightly more efficient but object identifier dependent.
+ * This CMAC can be set to define
  * multiple tilings, each specified for different sets attributes or different object classes. The multiple tilings
  * can be uniformly offset from each other, or randomly jittered to different alignments. The set of state
  * (or state-action) features stored are dynamically created as new states are introduced. That is, {@link Tiling}
@@ -103,7 +106,7 @@ public class CMACFeatureDatabase implements FeatureDatabase {
 	protected List <Tiling>											tilings;
 	
 	/**
-	 * For each tiling, a map from state tiles to {@link StoredFeaturesForTiling} objects, which contain
+	 * For each tiling, a map from state tiles to {@link CMACFeatureDatabase.StoredFeaturesForTiling} objects, which contain
 	 * distinct state features for each action. This is useful when doing approximation for state-action values.
 	 */
 	protected List<Map<StateTile, StoredFeaturesForTiling>>			actionTilings;
@@ -286,7 +289,10 @@ public class CMACFeatureDatabase implements FeatureDatabase {
 		//previously queried states.
 	}
 	
-	
+	@Override
+	public int numberOfFeatures() {
+		return Math.max(this.nextActionFeatureId, this.nextStateFeatureId);
+	}
 	
 	/**
 	 * A class that is used to assign unique feature identifiers for each action for each state tile.
@@ -408,5 +414,8 @@ public class CMACFeatureDatabase implements FeatureDatabase {
 		}
 		
 	}
+
+
+	
 
 }
