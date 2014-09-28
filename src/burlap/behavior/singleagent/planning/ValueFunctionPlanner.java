@@ -187,7 +187,6 @@ public abstract class ValueFunctionPlanner extends OOMDPPlanner implements QComp
 		}
 		
 		return res;
-		
 	}
 	
 	public List<QValue> getAffordanceQs(State s, AffordancesController affController) {
@@ -208,7 +207,7 @@ public abstract class ValueFunctionPlanner extends OOMDPPlanner implements QComp
 		List <QValue> res = new ArrayList<QValue>();
 		for(Action a : actions){
 			List<GroundedAction> applications = a.getAllApplicableGroundedActions(s);
-			List<AbstractGroundedAction> affActions = affController.getPrunedActionSetForState(s);
+			List<AbstractGroundedAction> affActions = affController.getPrunedActionsForState(s);
 			for(GroundedAction ga : applications){
 				if(affActions.contains(ga)){
 					res.add(this.getQ(sh, ga, matching));
@@ -217,8 +216,6 @@ public abstract class ValueFunctionPlanner extends OOMDPPlanner implements QComp
 		}
 		
 		return res;
-		
-		
 	}
 	
 	
@@ -315,7 +312,6 @@ public abstract class ValueFunctionPlanner extends OOMDPPlanner implements QComp
 			assert(matchingAt == null);
 		}
 		
-//		System.out.println("(ValueFunctionPlanner) matchingAt: " + matchingAt);
 		double q = 0.;
 		if(!this.tf.isTerminal(sh.s)){
 			q = this.computeQ(sh.s, matchingAt);
@@ -442,7 +438,6 @@ public abstract class ValueFunctionPlanner extends OOMDPPlanner implements QComp
 		if(this.useCachedTransitions){
 			List<ActionTransitions> transitions = this.getActionsTransitions(sh);
 			for(ActionTransitions at : transitions){
-//				System.out.println((valuefuncplanner)at.ga.actionName());
 				double q = this.computeQ(sh.s, at);
 				if(q > maxQ){
 					maxQ = q;
@@ -454,9 +449,7 @@ public abstract class ValueFunctionPlanner extends OOMDPPlanner implements QComp
 			
 			List<GroundedAction> gas = Action.getAllApplicableGroundedActionsFromActionList(this.actions, sh.s);
 			
-//			System.out.println(gas.size());
 			for(GroundedAction ga : gas){
-//				System.out.println("(valuefuncplanner)" + ga.actionName());
 				double q = this.computeQ(sh, ga);
 				if(q > maxQ){
 					maxQ = q;
@@ -487,32 +480,26 @@ public abstract class ValueFunctionPlanner extends OOMDPPlanner implements QComp
 		double maxQ = Double.NEGATIVE_INFINITY;
 		
 		if(this.useCachedTransitions){
-//			System.out.println("(valuefunctionplanner)TRANSITIONS:");
 			List<ActionTransitions> transitions = this.getAffordanceActionsTransitions(sh, affController);
 			for(ActionTransitions at : transitions){
-//				System.out.println("trans: " + at.ga.actionName());
 				double q = this.computeQ(sh.s, at);
 				if(q > maxQ){
 					maxQ = q;
 				}
 			}	
-//			System.out.println("\n");
 		}
 		else{
 			// TODO: check if this is the broken thing.
 			List <GroundedAction> gas = this.getAffordanceGroundedActions(sh.s, affController);
-//			List <GroundedAction> gas = Action.getAllApplicableAffordanceGroundedActionsFromActionList(this.actions, sh.s, affController);
 			
-//			System.out.println("(ValueFunctionPlanner) size of action set: " + gas.size());
 			for(GroundedAction ga : gas){
-//				System.out.println(ga.actionName());
 				double q = this.computeQ(sh, ga);
 				if(q > maxQ){
 					maxQ = q;
 				}
 			}
 		}
-//		System.out.println("\n");
+
 		valueFunction.put(sh, maxQ);
 		return maxQ;
 	}
@@ -526,7 +513,7 @@ public abstract class ValueFunctionPlanner extends OOMDPPlanner implements QComp
 	protected List <ActionTransitions> getAffordanceActionsTransitions(StateHashTuple sh, AffordancesController affController){
 			
 		// Select action set with affordance controller
-		List <AbstractGroundedAction> prunedActions = affController.getPrunedActionSetForState(sh.s);
+		List <AbstractGroundedAction> prunedActions = affController.getPrunedActionsForState(sh.s);
 		
 		// Now add transitions
 		List<ActionTransitions> allTransitions = new ArrayList<ActionTransitions>(prunedActions.size());
@@ -548,8 +535,8 @@ public abstract class ValueFunctionPlanner extends OOMDPPlanner implements QComp
 		List<GroundedAction> res = new ArrayList<GroundedAction>();
 		
 		// Ground all of the affordance actions and add them
-		for(AbstractGroundedAction aga : affController.getPrunedActionSetForState(st)) {
-			GroundedAction ga = new GroundedAction(this.domain.getAction(aga.actionName()),aga.params);
+		for(AbstractGroundedAction aga : affController.getPrunedActionsForState(st)) {
+			GroundedAction ga = new GroundedAction(getActionByNameFromAllActions(aga.actionName()), aga.params);
 			if (ga.action.applicableInState(st, ga.params)) {
 				res.add(ga);
 			}
@@ -562,6 +549,16 @@ public abstract class ValueFunctionPlanner extends OOMDPPlanner implements QComp
 		}
 		
 		return res;
+	}
+	
+	private Action getActionByNameFromAllActions(String name) {
+		for(Action act : this.actions) {
+			if (act.getName().equals(name)){
+				return act;
+			}
+		}
+		System.out.println("Could not find action: " + name);
+		throw new NullPointerException();
 	}
 	
 	/**
@@ -635,10 +632,6 @@ public abstract class ValueFunctionPlanner extends OOMDPPlanner implements QComp
 	protected double computeQ(State s, ActionTransitions trans){
 		
 		double q = 0.;
-//		System.out.println("(valuefunctionplanner)trans: " + trans);
-//		System.out.println("(valuefunctionplanner)trans.ga: " + trans.ga);
-//		System.out.println("(valuefunctionplanner)trans.ga.action: " + trans.ga.action);
-//		System.out.println("\n");
 		if(trans.ga.action instanceof Option){
 			
 			Option o = (Option)trans.ga.action;

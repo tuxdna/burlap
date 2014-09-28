@@ -42,17 +42,6 @@ public class AffordanceGreedyQPolicy extends GreedyQPolicy {
 		List<QValue> allQValues = ((ValueFunctionPlanner) this.qplanner).getQs(s);
 		
 		List<QValue> filteredQValues = filterQValues(allQValues, s);
-		
-		// If Affordances prune away all actions, back off to full action set 
-		if (filteredQValues.isEmpty()) {
-			filteredQValues = allQValues;
-		}
-		
-//		System.out.println("(affgreedyqpolicy)filteredQs Action set: " + filteredQValues.size());
-//		for(QValue q : filteredQValues) {
-//			System.out.println(q.a.actionName());
-//		}
-//		System.out.println("\n");
 
 		List <QValue> maxActions = new ArrayList<QValue>();
 		maxActions.add(filteredQValues.get(0));
@@ -68,7 +57,6 @@ public class AffordanceGreedyQPolicy extends GreedyQPolicy {
 				maxQ = q.q;
 			}
 		}
-
 		
 		return maxActions.get(rand.nextInt(maxActions.size())).a;
 	}
@@ -87,13 +75,14 @@ public class AffordanceGreedyQPolicy extends GreedyQPolicy {
 			qActions.add(q.a);
 		}
 		
-		qActions = this.affController.filterIrrelevantActionsInState(qActions, s);
+		qActions = this.affController.getPrunedActionsForState(s);
 		
 		for(QValue q : allQValues){
 			if(qActions.contains(q.a)){
 				affFilteredQValues.add(q);
 			}
 		}
+		
 		return affFilteredQValues;
 	}
 	

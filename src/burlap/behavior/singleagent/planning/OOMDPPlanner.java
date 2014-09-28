@@ -54,7 +54,7 @@ public abstract class OOMDPPlanner {
 	/**
 	 * The list of actions this planner can use. May include non-domain specified actions like options.
 	 */
-	protected List <Action>											actions;
+	public List <Action>											actions;
 	
 	/**
 	 * A mapping to internal states that are stored. Useful since two identical states may have different object instance name identifiers
@@ -189,6 +189,14 @@ public abstract class OOMDPPlanner {
 	 */
 	public StateHashFactory getHashingFactory(){
 		return this.hashingFactory;
+	}
+	
+	/**
+	 * Returns the mapeToStateIndex this planner uses
+	 * @return
+	 */
+	public Map<StateHashTuple, StateHashTuple> getMapToStateIndex() {
+		return this.mapToStateIndex;
 	}
 	
 	

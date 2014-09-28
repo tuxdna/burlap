@@ -3,6 +3,9 @@
  */
 package burlap.behavior.singleagent.planning.stochastic.rtdp;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import burlap.behavior.affordances.AffordancesController;
 import burlap.behavior.singleagent.ValueFunctionInitialization;
 import burlap.behavior.singleagent.planning.ValueFunctionPlanner;
@@ -39,19 +42,6 @@ import burlap.oomdp.singleagent.RewardFunction;
 public class AffordanceRTDP extends RTDP {
 
 	private AffordancesController affController;
-
-	public AffordanceRTDP(Domain domain, RewardFunction rf, TerminalFunction tf, double gamma, StateHashFactory hashingFactory, double vInit, int numRollouts, double maxDelta, int maxDepth, AffordancesController affController){
-		super(domain, rf, tf, gamma,hashingFactory, vInit, numRollouts, maxDelta, maxDepth);
-		this.VFPInit(domain, rf, tf, gamma, hashingFactory);
-		this.affController = affController;
-		this.numRollouts = numRollouts;
-		this.maxDelta = maxDelta;
-		this.maxDepth = maxDepth;
-		this.rollOutPolicy = new AffordanceGreedyQPolicy(affController, this);
-
-		this.valueInitializer = new ValueFunctionInitialization.ConstantValueFunctionInitialization(vInit);
-		
-	}
 	
 	public AffordanceRTDP(Domain domain, RewardFunction rf, TerminalFunction tf, double gamma, StateHashFactory hashingFactory, double vInit, int numRollouts, double maxDelta, int maxDepth, AffordancesController affController, int minRolloutsRequiredForConvergance){
 		super(domain, rf, tf, gamma,hashingFactory, vInit, numRollouts, maxDelta, maxDepth);
@@ -78,22 +68,20 @@ public class AffordanceRTDP extends RTDP {
 		int totalStates = 0;
 		int consecutiveSmallDeltas = 0;
 		int numBellmanUpdates = 0;
-
 		for(int i = 0; i < numRollouts; i++){
-			
+			List<GroundedAction> rolloutActions = new ArrayList<GroundedAction>();
 			State curState = initialState;
 
 			int nSteps = 0;
 			double delta = 0;
 
 			while(!this.tf.isTerminal(curState) && nSteps < this.maxDepth){
-
-				this.affController.resampleActionSets();
 				StateHashTuple sh = this.hashingFactory.hashState(curState);
 				
 				// Select an action
 				GroundedAction ga = (GroundedAction)this.rollOutPolicy.getAction(curState);
-				
+				rolloutActions.add(ga);
+
 //				System.out.println("(affRTDP)Action : " + ga.actionName());
 				
 				// Update this state's value
@@ -109,7 +97,13 @@ public class AffordanceRTDP extends RTDP {
 
 			totalStates += nSteps;
 			
-			DPrint.cl(debugCode, "Pass: " + i + "; Num states: " + nSteps + " (total: " + totalStates + ")");
+//			DPrint.cl(debugCode, "Pass: " + i + "; Num states: " + nSteps + " (total: " + totalStates + ")");
+			
+//			System.out.print("[affordanceRTDP] Action sequence: ");
+//			for(GroundedAction ga : rolloutActions) {
+//				System.out.print(ga + ",");
+//			}
+//			System.out.print("\n\n");
 			
 			if(delta < this.maxDelta){
 				consecutiveSmallDeltas++;

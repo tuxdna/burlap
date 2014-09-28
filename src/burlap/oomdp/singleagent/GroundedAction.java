@@ -1,6 +1,7 @@
 package burlap.oomdp.singleagent;
 
 import burlap.oomdp.core.AbstractGroundedAction;
+import burlap.oomdp.core.ObjectInstance;
 import burlap.oomdp.core.State;
 
 /**
@@ -56,7 +57,8 @@ public class GroundedAction extends AbstractGroundedAction{
 	 * @return The state after the action has been executed
 	 */
 	public State executeIn(State s){
-		return action.performAction(s, params);
+		State sprime =  action.performAction(s, params);
+		return sprime;
 	}
 	
 	/**
@@ -98,6 +100,7 @@ public class GroundedAction extends AbstractGroundedAction{
 		}
 		
 		GroundedAction go = (GroundedAction)other;
+		
 		if(!this.action.getName().equals(go.action.getName())){
 			return false;
 		}

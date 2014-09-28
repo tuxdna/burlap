@@ -5,8 +5,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 
+import burlap.behavior.singleagent.planning.OOMDPPlanner;
 import burlap.oomdp.core.AbstractGroundedAction;
 import burlap.oomdp.core.Domain;
 import burlap.oomdp.core.GroundedProp;
@@ -17,64 +17,63 @@ import burlap.oomdp.logicalexpressions.PFAtom;
 import burlap.oomdp.singleagent.Action;
 import burlap.oomdp.singleagent.GroundedAction;
 
+
 public class AffordanceDelegate {
 
 	 protected Affordance								affordance;
-	 protected Collection<AbstractGroundedAction>		listedActionSet;
+	 protected Map<String,AbstractGroundedAction>		fullActionSet;
 	 protected boolean									active = false;
 	 protected boolean									goalActive = false;
-	 private final static double						actCountPercentThreshold = 0.01;
-	 
+
 	 public AffordanceDelegate(Affordance affordance){
 		 this.affordance = affordance;
-//		 this.resampleActionSet();
-	 }
-	 
-	 public void resampleActionSet(){
-		 this.listedActionSet = affordance.sampleNewLiftedActionSet();
-//		 System.out.println("ACTION SET: ");
-//		 for(AbstractGroundedAction a : this.listedActionSet) {
-//			 System.out.println(a.actionName());
-//		 }
-//		 System.out.println("\n");
-	 }
-	 
-	 public void setCurrentGoal(LogicalExpression currentGoal){
-		 //TODO: fill this in; should set current goal; check if this affordance does not satisfy; and handle variable bindings with lifted affordance goal if it is satisifed.
-		 if(this.affordance.goalDescription.toString().equals(currentGoal.toString())) {
-			 this.goalActive = true;
-		 }
 	 }
 	 
 	 /**
-	  * Primes this affordance to answer if actions are relevant for the given state (using method {@link #actionIsRelevant(AbstractGroundedAction)})
-	  * and return whether this affordance is active for the given state and using the currently set goal as the task (sub)goal.
-	  * If this affordance is not active,
-	  * then any subsequent queries to {@link #isActionRelevant(AbstractGroundedAction)} will return false.
-	  * An affordance is determined to be active if its preconditions are satisifed in s and if the current task goal
-	  * entails the affordance lifted goal description.
-	  * @param s the state in which to prime the affordance
-	  * @return true if this affordance is active, false if it is not.
+	  * Updates the affordance to the current goal.
+	  * @param currentGoal
 	  */
-	 public boolean primeAndCheckIfActiveInState(State s, LogicalExpression lgd){
-//		 if(!this.goalActive) {
-//			 this.active = false;
-//			 return false;
-//		 }
-		 if(this.affordance.goalDescription.toString().equals(lgd.toString()) && this.affordance.preCondition.evaluateIn(s)) {
-			 this.active = true;
+	 public void setCurrentGoal(LogicalExpression currentGoal){
+		 if(this.affordance.goalDescription.toString().equals(currentGoal.toString())) {
+			 this.goalActive = true;
+		 }
+		 else {
+			 this.goalActive = false;
+		 }
+	 }
+	 
+	 public void setTotalActionCountMap(Map<AbstractGroundedAction,Integer> totalActionCounts) {
+		 this.affordance.setTotalActionCountMap(totalActionCounts);
+	 }
+	 
+	 
+	 // --- ACCESSORS ---
+	 public int getTotalActivations() {
+		 return this.affordance.numActivations;
+	 }
+	
+	 public Map<AbstractGroundedAction,Integer> getActionCounts() {
+		 return this.affordance.getActionCounts();
+	 }
+	 
+	 public Map<AbstractGroundedAction,Integer> getTotalActionCounts() {
+		 return this.affordance.getTotalActionCounts();
+	 }
+	 
+	 /**
+	  * Checks to see if the affordance is active
+	  * @param s
+	  * @return
+	  */
+	 public boolean isActive(State s) {
+		 if(this.goalActive && this.affordance.preCondition.evaluateIn(s)) {
 			 return true;
 		 }
-		 this.active = false;
 		 return false;
 	 }
 	 
-	 public boolean actionIsRelevant(AbstractGroundedAction action){
-		 if(this.active && this.listedActionSet.contains(action)) {
-			 return true;
-		 }
-		 
-		 return false;
+	 public double probActionIsRelevant(AbstractGroundedAction action) {
+		 return this.affordance.probActionIsRelevant(action);
 	 }
 	 
 	 public Affordance getAffordance() {
@@ -82,12 +81,15 @@ public class AffordanceDelegate {
 	 }
 	 
 	 /**
-	 * Assumes that the header is on the first line it reads
-	 * @param d: domain
-	 * @param scnr: scanner associated with the knowledge base file
-	 */
-	public static AffordanceDelegate loadSoft(Domain d, Scanner scnr) {
-		String line;
+	  * Loads a single affordance delegate given a string of the affordance data from a knowledge base file
+	  * @param d: the domain in which to apply the affordances
+	  * @param tempExtActions: a map from action names to action objects, containing the non-domain referenced actions (e.g. options, macroactions) 
+	  * @param affString: a string containing the affordance data from the knowledge base file
+	  * @param expertFlag: a boolean indicating whether or not this delegate should be treated as an expert affordance.	
+	  * @return
+	  */
+	public static AffordanceDelegate load(Domain d, Map<String,Action> tempExtActions, String affString, boolean expertFlag) {
+		String[] affLines = affString.split("\n");
 		boolean readHeader = true;
 		boolean readActCounts = true;
 		
@@ -95,9 +97,13 @@ public class AffordanceDelegate {
 		LogicalExpression goal = null;
 		
 		int[] actionNumCounts = null;
-		HashMap<AbstractGroundedAction,Integer> actionCounts = new HashMap<AbstractGroundedAction,Integer>();
-		while (scnr.hasNextLine()) {
-			line = scnr.nextLine();
+		Map<AbstractGroundedAction,Integer> actionCounts = new HashMap<AbstractGroundedAction,Integer>();
+		Map<AbstractGroundedAction,Integer> totalActionCounts = new HashMap<AbstractGroundedAction,Integer>();
+
+		for(String line : affLines) {
+			if(line.isEmpty()) {
+				continue;
+			}
 			
 			if (line.equals("===")) {
 				// Reached the end of an affordance definition
@@ -145,140 +151,31 @@ public class AffordanceDelegate {
 				String actName = info[0];
 				Integer count = Integer.parseInt(info[1]);
 				
+				Integer totalCount = 900;
+				if(!expertFlag) totalCount = Integer.parseInt(info[2]);
+				
 				// Get action free variables
 				Action act = d.getAction(actName);
-//				System.out.println("(affDelegate)actionName: " + actName);
+				// act is a temporally extended action, fetch it from the hashmap provided.
+				if(act == null) {
+					act = tempExtActions.get(actName);
+				}
+				
+				assert(act!=null);
 				String[] actionParams = makeFreeVarListFromObjectClasses(act.getParameterClasses());
 				
 				GroundedAction ga = new GroundedAction(act, actionParams);
 				actionCounts.put(ga, count);
+				totalActionCounts.put(ga, totalCount);
 			} 
-			else {
-				// Read the action set size counts
-				Integer size = Integer.parseInt(info[0]);
-				Integer count = Integer.parseInt(info[1]);
-				
-				actionNumCounts[size] = count;
-			}
-			
 		}
 		
 		// Create the Affordance
 		List<AbstractGroundedAction> allActions = new ArrayList<AbstractGroundedAction>(actionCounts.keySet()); 
-		Affordance aff = new SoftAffordance(preCondition, goal, allActions);
-		((SoftAffordance)aff).setActionCounts(actionCounts);
-		((SoftAffordance)aff).setActionNumCounts(actionNumCounts);
-		((SoftAffordance)aff).postProcess();
-
-		AffordanceDelegate affDelegate = new AffordanceDelegate(aff);
+		Affordance aff = new Affordance(preCondition, goal, allActions);
+		aff.setActionCounts(actionCounts);
+		aff.setTotalActionCountMap(totalActionCounts);
 		
-		return affDelegate;
-	}
-	
-	/**
-	 * Reads in a hard affordance from a knowledge base file.
-	 * Assumes that the header is on the first line it reads
-	 * @param d: domain
-	 * @param scnr: scanner associated with the knowledge base file
-	 */
-	public static AffordanceDelegate loadHard(Domain d, Scanner scnr) {
-		String line;
-		boolean readHeader = true;
-		boolean readActCounts = true;
-		
-		LogicalExpression preCondition = null;
-		LogicalExpression goal = null;
-		
-		List<AbstractGroundedAction> actions = new ArrayList<AbstractGroundedAction>();
-		Map<String,Integer> actionCounts = new HashMap<String,Integer>();
-		while (scnr.hasNextLine()) {
-			line = scnr.nextLine();
-			
-			if (line.equals("===")) {
-				// Reached the end of an affordance definition
-				break;
-			}
-			
-			if (line.equals("---")) {
-				// Finished reading action counts -- skip reading action set sizes (scanner jumps over rest)
-				readActCounts = false;
-				
-				// Calculate total number of action counts
-				int totalCount = 0;
-				for(Integer count : actionCounts.values()) {
-					totalCount += count;
-				}
-				
-				// Add actions that have more than 15% of the counts
-				for(String actName : actionCounts.keySet()) {
-//					System.out.println("(AffordanceDelegate) percentage, count: " + ((double)actionCounts.get(actName)) / ((double) totalCount) + "," + actionCounts.get(actName));
-					if(((double)actionCounts.get(actName)) / ((double) totalCount) >= actCountPercentThreshold) {
-						// Get action free variables
-						Action act = d.getAction(actName);
-	//					System.out.println("(affDelegate)actionName: " + actName);
-						String[] actionParams = makeFreeVarListFromObjectClasses(act.getParameterClasses());
-						
-						GroundedAction ga = new GroundedAction(act, actionParams);
-						actions.add(ga);
-					}
-				}
-//				System.out.println("(AffordanceDelegate) actionSet: \n");
-//				for(AbstractGroundedAction ga : actions){
-//					System.out.println("\t(AffordanceDelegate) action: " + ga.actionName());
-//				}
-//				System.out.println("\n");
-				
-				continue;
-			}
-			
-			String[] info = line.split(",");
-			
-			if (readHeader) {
-				// We haven't read the header yet, so do that
-				
-				// TODO: Change to parsing a logical expression (instead of assuming a single pf)
-				String preCondLE= info[0];
-				String goalName = info[1];
-				
-				// -- Create Precondition -- 
-				PropositionalFunction preCondPF = d.getPropFunction(preCondLE);
-				
-				// Get grounded prop free variables
-				String[] groundedPropPreCondFreeVars = makeFreeVarListFromObjectClasses(preCondPF.getParameterClasses());
-				GroundedProp preCondGroundedProp = new GroundedProp(preCondPF, groundedPropPreCondFreeVars);
-				preCondition = new PFAtom(preCondGroundedProp);
-				
-				// -- Create GOAL --
-				PropositionalFunction goalPF = d.getPropFunction(goalName);
-//				System.out.println("(AffordanceDelegate) goalPf: " + goalPF.getName());
-				// Get grounded prop free variables
-				String[] groundedPropGoalFreeVars = makeFreeVarListFromObjectClasses(goalPF.getParameterClasses());
-				GroundedProp goalGroundedProp = new GroundedProp(goalPF, groundedPropGoalFreeVars);
-				goal = new PFAtom(goalGroundedProp);
-				
-				readHeader = false;
-				continue;
-			}
-			
-			if (readActCounts) {
-				// Read the action counts
-				String actName = info[0];
-				actionCounts.put(actName, Integer.parseInt(info[1]));
-//				if(count >= actCountThreshold) {
-//					// Get action free variables
-//					Action act = d.getAction(actName);
-////					System.out.println("(affDelegate)actionName: " + actName);
-//					String[] actionParams = makeFreeVarListFromObjectClasses(act.getParameterClasses());
-//					
-//					GroundedAction ga = new GroundedAction(act, actionParams);
-//					actions.add(ga);
-//				}
-			}
-			
-		}
-		
-		// Create the Hard Affordance
-		Affordance aff = new HardAffordance(preCondition, goal, actions);
 		AffordanceDelegate affDelegate = new AffordanceDelegate(aff);
 		
 		return affDelegate;
@@ -303,6 +200,37 @@ public class AffordanceDelegate {
 		groundedPropFreeVars = groundedPropFreeVariablesList.toArray(groundedPropFreeVars);
 		
 		return groundedPropFreeVars;
+	}
+	
+	/**
+	 * Prints the action counts for debugging purposes
+	 */
+	public void printCounts() {
+		System.out.println("Affordance pred: " + this.affordance.preCondition.toString());
+		for (AbstractGroundedAction a: this.affordance.getActionCounts().keySet()) {
+			System.out.println(a.toString() + ": " + this.affordance.getActionCounts().get(a));
+		}
+	}
+	
+	
+	/**
+	 * Creates a string appropriate for writing the affordance to a file
+	 * @return
+	 */
+	public String toFile() {
+		String out = "";
+
+		// Header information (what the affordance's PF and LGD are)
+		out += this.affordance.preCondition.toString() + "," + this.affordance.goalDescription.toString() + "\n";
+				
+		// Add action counts (w/ total action counts
+		
+		for (AbstractGroundedAction a: this.affordance.getActionCounts().keySet()) {
+			out += a.actionName() + "," + this.affordance.getActionCounts().get(a) + "," + this.affordance.getTotalActionCounts().get(a) + "\n";
+		}
+
+		out += "===\n";
+		return out;
 	}
 	
 	public String toString() {

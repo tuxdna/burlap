@@ -1,5 +1,6 @@
 package burlap.behavior.singleagent.planning.stochastic.rtdp;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -206,7 +207,6 @@ public class RTDP extends ValueFunctionPlanner {
 		else{
 			return this.batchRTDP(initialState);
 		}
-
 	}
 
 	
@@ -221,7 +221,7 @@ public class RTDP extends ValueFunctionPlanner {
 		int consecutiveSmallDeltas = 0;
 		int numBellmanUpdates = 0;
 		for(int i = 0; i < numRollouts; i++){
-			
+			List<GroundedAction> rolloutActions = new ArrayList<GroundedAction>();
 			State curState = initialState;
 			int nSteps = 0;
 			double delta = 0;
@@ -231,12 +231,11 @@ public class RTDP extends ValueFunctionPlanner {
 				
 				//select an action
 				GroundedAction ga = (GroundedAction)this.rollOutPolicy.getAction(curState);
-				
-//				System.out.println("(rtdp)Action : " + ga.actionName());
-				
+				rolloutActions.add(ga);
 				//update this state's value
 				double curV = this.value(sh);
 				double nV = this.performBellmanUpdateOn(sh);
+
 				numBellmanUpdates++;
 				delta = Math.max(Math.abs(nV - curV), delta); 
 				
@@ -245,10 +244,15 @@ public class RTDP extends ValueFunctionPlanner {
 				nSteps++;
 			}
 			
+			
 			totalStates += nSteps;
 			
-			DPrint.cl(debugCode, "Pass: " + i + "; Num states: " + nSteps + " (total: " + totalStates + ")");
-			
+//			DPrint.cl(debugCode, "Pass: " + i + "; Num states: " + nSteps + " (total: " + totalStates + ")");
+//			System.out.print("Action sequence: ");
+//			for(GroundedAction ga : rolloutActions) {
+//				System.out.print(ga + ",");
+//			}
+//			System.out.print("\n\n");
 			if(delta < this.maxDelta){
 				consecutiveSmallDeltas++;
 				if(consecutiveSmallDeltas >= this.minNumRolloutsWithSmallValueChange){
@@ -262,8 +266,7 @@ public class RTDP extends ValueFunctionPlanner {
 			
 		}
 		
-		return numBellmanUpdates;
-		
+		return numBellmanUpdates;	
 	}
 	
 	
@@ -288,7 +291,7 @@ public class RTDP extends ValueFunctionPlanner {
 			double delta = this.performOrderedBellmanUpdates(orderedStates);
 			numBellmanUpdates++;
 			totalStates += orderedStates.size();
-			DPrint.cl(debugCode, "Pass: " + i + "; Num states: " + orderedStates.size() + " (total: " + totalStates + ")");
+//			DPrint.cl(debugCode, "Pass: " + i + "; Num states: " + orderedStates.size() + " (total: " + totalStates + ")");
 			
 			if(delta < this.maxDelta){
 				consecutiveSmallDeltas++;

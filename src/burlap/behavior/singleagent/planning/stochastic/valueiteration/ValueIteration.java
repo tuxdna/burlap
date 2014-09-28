@@ -13,10 +13,10 @@ import burlap.behavior.statehashing.StateHashFactory;
 import burlap.behavior.statehashing.StateHashTuple;
 import burlap.debugtools.DPrint;
 import burlap.oomdp.core.Domain;
+import burlap.oomdp.core.ObjectInstance;
 import burlap.oomdp.core.State;
 import burlap.oomdp.core.TerminalFunction;
 import burlap.oomdp.singleagent.RewardFunction;
-
 
 
 /**
@@ -162,7 +162,7 @@ public class ValueIteration extends ValueFunctionPlanner{
 			
 		}
 		
-		DPrint.cl(this.debugCode, "Passes: " + i);
+//		DPrint.cl(this.debugCode, "Passes: " + i);
 		
 		this.hasRunVI = true;
 		return bellmanUpdates;
@@ -183,16 +183,15 @@ public class ValueIteration extends ValueFunctionPlanner{
 			return false; //no need for additional reachability testing
 		}
 		
-		DPrint.cl(this.debugCode, "Starting reachability analysis");
+//		DPrint.cl(this.debugCode, "Starting reachability analysis");
 		
 		//add to the open list
 		LinkedList <StateHashTuple> openList = new LinkedList<StateHashTuple>();
 		Set <StateHashTuple> openedSet = new HashSet<StateHashTuple>();
 		openList.offer(sih);
-		openedSet.add(sih);
+		openedSet.add(sih); 
 		
-		
-		while(openList.size() > 0){
+		while(!openList.isEmpty()){
 			StateHashTuple sh = openList.poll();
 			
 			//skip this if it's already been expanded
@@ -204,10 +203,9 @@ public class ValueIteration extends ValueFunctionPlanner{
 			
 			//do not need to expand from terminal states if set to prune
 			if(this.tf.isTerminal(sh.s) && stopReachabilityFromTerminalStates){
-				System.out.println("(ValueIteration)reached terminal");
+//				System.out.println("(ValueIteration)reached terminal");
 				continue;
 			}
-			
 			
 			//get the transition dynamics for each action and queue up new states
 			List <ActionTransitions> transitions = this.getActionsTransitions(sh);
@@ -218,14 +216,11 @@ public class ValueIteration extends ValueFunctionPlanner{
 						openedSet.add(tsh);
 						openList.offer(tsh);
 					}
-				}
-				
+				}	
 			}
-			
-			
 		}
 		
-		DPrint.cl(this.debugCode, "Finished reachability analysis; # states: " + mapToStateIndex.size());
+//		DPrint.cl(this.debugCode, "Finished reachability analysis; # states: " + mapToStateIndex.size());
 		
 		this.foundReachableStates = true;
 		this.hasRunVI = false;

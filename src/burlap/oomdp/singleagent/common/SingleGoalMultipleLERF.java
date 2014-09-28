@@ -17,7 +17,7 @@ import burlap.oomdp.singleagent.RewardFunction;
 /**
  * This class defines a reward function that returns a goal reward when any grounded form of a propositional
  * function is true in the resulting state and a default non-goal reward otherwise.
- * @author dabel
+ * @author 
  *
  */
 public class SingleGoalMultipleLERF implements RewardFunction {
