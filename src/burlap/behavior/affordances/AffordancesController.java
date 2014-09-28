@@ -1,32 +1,53 @@
 package burlap.behavior.affordances;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
-import minecraft.MinecraftStateParser;
-import minecraft.NameSpace;
 import burlap.oomdp.core.AbstractGroundedAction;
 import burlap.oomdp.core.ObjectInstance;
 import burlap.oomdp.core.State;
 import burlap.oomdp.logicalexpressions.LogicalExpression;
 import burlap.oomdp.singleagent.Action;
+import cc.mallet.types.Dirichlet;
+import cc.mallet.types.Multinomial;
 
 public class AffordancesController {
 
-	protected List<AffordanceDelegate> affordances;
-	public LogicalExpression currentGoal;
-	protected HashMap<State,List<AbstractGroundedAction>> stateActionHash = new HashMap<State,List<AbstractGroundedAction>>();
-	protected boolean cacheActionSets = false; // True when we only sample action sets each time we enter a state, then cache for later use. 
-	private List<AbstractGroundedAction> allActions;
+	private List<AffordanceDelegate> affordances = new ArrayList<AffordanceDelegate>();
+	public List<AbstractGroundedAction> allActions = new ArrayList<AbstractGroundedAction>();
+	public LogicalExpression currentGoal; 
+	private boolean threshold = false; // True when we threshold probabilities to determine actions
+	private boolean expertFlag = false;
+	private double hardThreshold; 
 	
+	/**
+	 * Create an affordances controller with the list of affordance delegates to use for planning.
+	 * @param affs
+	 */
 	public AffordancesController(List<AffordanceDelegate> affs) {
-		this.affordances = affs;
+		// Add each manually so that we add all relevant actions, too.
+		for(AffordanceDelegate affDel : affs) {
+			this.addAffordanceDelegate(affDel);
+		}
 	}
 	
-	public AffordancesController(List<AffordanceDelegate> affs, boolean cacheActionsInEachState) {
-		this.affordances = affs;
-		this.cacheActionSets = cacheActionsInEachState;
+	/**
+	 * Create an affordances controller with the list of affordance delegates to use for planning.
+	 * @param affs
+	 * @param hardFlag: a boolean indicating if the affordances should be treated in a crisp way
+	 */
+	public AffordancesController(List<AffordanceDelegate> affs, boolean hardFlag, boolean expertFlag) {
+		// Add each manually so that we add all relevant actions, too.
+		for(AffordanceDelegate affDel : affs) {
+			this.addAffordanceDelegate(affDel);
+		}
+		this.threshold = hardFlag;
+		this.expertFlag = expertFlag;
 	}
 	
 	/**
@@ -41,112 +62,186 @@ public class AffordancesController {
 	}
 	
 	/**
-	 * Resets all of the action sets for each affordance (resamples)
+	 * Add the affordance delegate to the controller. If it has any actions we don't have yet, add them.
+	 * @param aff
 	 */
-	public void resampleActionSets(){
-		for(AffordanceDelegate aff : this.affordances){
-			aff.resampleActionSet();
-		}
-	}
-	
-	/**
-	 * Takes the union of each affordance's
-	 * @return
-	 */
-	public List<AbstractGroundedAction> getPrunedActionSetForState(State s) {
-		
-		// If we're caching actions and we've already seen this state
-		if (cacheActionSets && stateActionHash.containsKey(s)) {
-			return stateActionHash.get(s);
-		}
-		
-		List<AbstractGroundedAction> actions = new ArrayList<AbstractGroundedAction>();
-		for(AffordanceDelegate aff : this.affordances){
-			// If affordance is active
-			if(aff.primeAndCheckIfActiveInState(s, currentGoal)){
-				aff.resampleActionSet();
-				for(AbstractGroundedAction aga : aff.listedActionSet) {
-					// If that action wasn't added yet then add it
-					if(!actions.contains(aga)) {
-						actions.add(aga);
-					}
-				}
-			}
-			
-		}
-		
-//		System.out.println("(AffordancesController) Affordance Action Set: ");
-//		for(AbstractGroundedAction aga : actions) {
-//			System.out.println("\t(AffordancesController) action: " + aga.actionName());
-//		}
-//		System.out.println("\n");
-		
-		if (actions.size() == 0) {
-			// return full action set
-//			System.out.println("(AffordancesController) EMPTY ACTION SET");
-		}
-		
-		// If we're caching, add the action set we just computed
-		if(cacheActionSets) {
-			stateActionHash.put(s, actions);
-		}
-		
-		return actions;
-	}
-	
-	/**
-	 * Retrieves the list of relevant actions for a particular state, as pruned by affordances.
-	 * @param actions: The set of actions to consider
-	 * @param s: The current world state
-	 * @return: A list of AbstractGroundedActions, the pruned action set.
-	 */
-	public List<AbstractGroundedAction> filterIrrelevantActionsInState(List<AbstractGroundedAction> actions, State s){
-		
-		// If we're caching actions and we've already seen this state
-		if (cacheActionSets && stateActionHash.containsKey(s)) {
-			return stateActionHash.get(s);
-		}
-		
-		// Build active affordance list
-		List<AffordanceDelegate> activeAffordances = new ArrayList<AffordanceDelegate>(this.affordances.size());
-		for(AffordanceDelegate aff : this.affordances){
-			if(aff.primeAndCheckIfActiveInState(s, currentGoal)){
-				activeAffordances.add(aff);
-			}
-		}
-		
-		// Prune actions according to affordances
-		List<AbstractGroundedAction> filteredList = new ArrayList<AbstractGroundedAction>(actions.size());
-		for(AbstractGroundedAction a : actions){
-			for(AffordanceDelegate aff : activeAffordances){
-				if(aff.actionIsRelevant(a)){
-					filteredList.add(a);
-					break;
-				}
-			}
-		}
-		
-		// If we filtered away everything, back off to full action set.
-		if(filteredList.size() == 0) {
-			return actions;
-		}
-
-		// If we're caching, add the action set we just computed
-		if(cacheActionSets) {
-			stateActionHash.put(s, filteredList);
-		}
-		
-		return filteredList;
-	}
-	
 	public void addAffordanceDelegate(AffordanceDelegate aff) {
 		if(!this.affordances.contains(aff)) {
 			this.affordances.add(aff);
 		}
+		for(AbstractGroundedAction action : aff.getAffordance().getActionCounts().keySet()) {
+			if(!this.allActions.contains(action)) {
+				this.allActions.add(action);
+			}
+		}
+		this.hardThreshold = 0.2 / allActions.size();
 	}
 	
 	public void removeAffordance(AffordanceDelegate aff) {
 		this.affordances.remove(aff);
 	}
 	
+	
+	// --- NEW STUFF ---
+	
+	/**
+	 * Prunes actions according the affordances in the controller, and returns
+	 * the action set suggested by the affordances. If the set is empty, return
+	 * the full action set.
+	 * @param s
+	 * @return
+	 */
+	public List<AbstractGroundedAction> getPrunedActionsForState(State s) {
+		Map<AbstractGroundedAction,Double> posterior = computePosterior(s);
+		List<AbstractGroundedAction> result = new ArrayList<AbstractGroundedAction>();
+		Random r = new SecureRandom();
+
+		// If we are thresholding probabilities to determine the action set
+		if(threshold && !expertFlag) {
+			for(AbstractGroundedAction aga : posterior.keySet()) {
+				if (posterior.get(aga) > this.hardThreshold) {
+					result.add(aga);
+				}
+			}
+		}
+		else if(expertFlag) {
+			
+			for(AbstractGroundedAction aga : posterior.keySet()) {
+				if (posterior.get(aga) > 0.0) {
+					result.add(aga);
+				}
+			}
+		}
+		// Otherwise, we sample from the posterior
+		else {
+			for(AbstractGroundedAction aga : posterior.keySet()) {
+				if (posterior.get(aga) > (r.nextDouble())) {
+					result.add(aga);
+				}
+			}
+		}
+		// If the set is empty, return the full action set.
+		if(result.isEmpty()) {
+			return this.allActions;
+		}
+		
+		return result;
+	}
+	
+	/**
+	 * Computes the posterior distribution over the probability that each action is optimal
+	 * in the given state @param s and the set of affordances in the controller.
+	 * @param s
+	 * @return
+	 */
+	private Map<AbstractGroundedAction,Double> computePosterior(State s) {
+		Map<AbstractGroundedAction,Double> posterior = new HashMap<AbstractGroundedAction,Double>();
+		List<AffordanceDelegate> activeAffs = new ArrayList<AffordanceDelegate>();
+		
+		double sumEqualsOneCheck = 0;
+		// Compute probability that each action is optimal;
+		for(AbstractGroundedAction action_i : this.allActions) {
+			double numerator = computeNumerator(s, action_i);
+			double denominator = computeDenominator(s, action_i);
+			
+//			System.out.println("(AffController) act.prob: " + action_i + "." + (numerator / denominator));
+			posterior.put(action_i, numerator / denominator);
+			sumEqualsOneCheck += numerator / denominator;
+		}
+		// Print out active affordances for debugging
+//		System.out.print("Active: ");
+//		for(AffordanceDelegate affDel : this.affordances) {
+//			if(affDel.isActive(s)) System.out.print(affDel + ",");
+//		}
+//		System.out.println("Total prob: " + sumEqualsOneCheck);
+//		System.out.println("\n");
+		
+		return posterior;
+	}
+	
+	/**
+	 * Computes the numerator of the posterior
+	 * @param s
+	 * @param action
+	 * @return
+	 */
+	private double computeNumerator(State s, AbstractGroundedAction action) {
+		double numerator = 1;
+		for(AffordanceDelegate affDel : this.affordances) {
+			if(affDel.isActive(s)) {
+				// Prob active when action is optimal
+				numerator *= affDel.probActionIsRelevant(action);
+			}
+			else {
+				// Prob inactive when action is optimal
+				numerator *= (1 - affDel.probActionIsRelevant(action));
+			}
+		}
+		return numerator * computePrior(s, action);
+	}
+	
+	/**
+	 * Computes the denominator of the posterior
+	 * @param s
+	 * @param action
+	 * @return
+	 */
+	private double computeDenominator(State s, AbstractGroundedAction action) {
+		// POSITIVE HYPOTHESIS (action is optimal)
+		double positiveHypothesis = 1;
+		for(AffordanceDelegate affDel : this.affordances) {
+			if(affDel.isActive(s)) {
+				// Prob active when action is optimal
+				positiveHypothesis *= affDel.probActionIsRelevant(action);
+			}
+			else {
+				// Prob inactive when action is optimal
+				positiveHypothesis *= (1 - affDel.probActionIsRelevant(action));
+			}
+		}
+		
+		// NEGATIVE HYPOTHESIS (action is not optimal)
+		double negativeHypothesis = 1;
+		for(AffordanceDelegate affDel : this.affordances) {	
+			
+			// Count number times affordance was active and action was not optimal
+			double countsOfAff = 0;
+			for(AbstractGroundedAction aga : affDel.getActionCounts().keySet()) {
+				countsOfAff += affDel.getActionCounts().get(aga);
+			}
+			double countsAffActionNotOptimal = countsOfAff - affDel.getActionCounts().get(action);
+			
+			// Count number of times the action was NOT optimal
+			double totalStatesVisited = 0; 
+			for(AbstractGroundedAction aga : affDel.getTotalActionCounts().keySet()) {
+				totalStatesVisited += affDel.getTotalActionCounts().get(aga);
+			}
+			double countsActionNotOptimal = totalStatesVisited - affDel.getTotalActionCounts().get(action);
+			
+			if(affDel.isActive(s)) {
+				negativeHypothesis *= countsAffActionNotOptimal / countsActionNotOptimal;
+			}
+			else {
+				negativeHypothesis *= (1 - (countsAffActionNotOptimal / countsActionNotOptimal));
+			}
+		}
+
+		return (positiveHypothesis * computePrior(s, action)) + (negativeHypothesis * (1 - computePrior(s, action)));
+	}
+	
+	/**
+	 * Computes the prior over action optimality
+	 * @param s
+	 * @param action_i
+	 * @return
+	 */
+	private double computePrior(State s, AbstractGroundedAction action_i) {
+		double totalStatesVisited = 0;
+		Map<AbstractGroundedAction,Integer> totalActionCounts = this.affordances.get(0).getTotalActionCounts();
+		for(AbstractGroundedAction aga : totalActionCounts.keySet()) {
+			totalStatesVisited += totalActionCounts.get(aga);
+		}
+
+		return totalActionCounts.get(action_i) / totalStatesVisited;
+	}
 }
