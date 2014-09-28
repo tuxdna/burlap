@@ -69,7 +69,7 @@ public class AffordancesController {
 		if(!this.affordances.contains(aff)) {
 			this.affordances.add(aff);
 		}
-		for(AbstractGroundedAction action : aff.getAffordance().getActionCounts().keySet()) {
+		for(AbstractGroundedAction action : aff.getAffordance().getActionOptimalAffActiveCounts().keySet()) {
 			if(!this.allActions.contains(action)) {
 				this.allActions.add(action);
 			}
@@ -80,7 +80,6 @@ public class AffordancesController {
 	public void removeAffordance(AffordanceDelegate aff) {
 		this.affordances.remove(aff);
 	}
-	
 	
 	// --- NEW STUFF ---
 	
@@ -105,7 +104,7 @@ public class AffordancesController {
 			}
 		}
 		else if(expertFlag) {
-			
+			// Expert action pruning (union of all active affordances are good actions)
 			for(AbstractGroundedAction aga : posterior.keySet()) {
 				if (posterior.get(aga) > 0.0) {
 					result.add(aga);
@@ -136,33 +135,21 @@ public class AffordancesController {
 	 */
 	private Map<AbstractGroundedAction,Double> computePosterior(State s) {
 		Map<AbstractGroundedAction,Double> posterior = new HashMap<AbstractGroundedAction,Double>();
-		List<AffordanceDelegate> activeAffs = new ArrayList<AffordanceDelegate>();
 		
-		double sumEqualsOneCheck = 0;
 		// Compute probability that each action is optimal;
 		for(AbstractGroundedAction action_i : this.allActions) {
 			double numerator = computeNumerator(s, action_i);
 			double denominator = computeDenominator(s, action_i);
 			
-//			System.out.println("(AffController) act.prob: " + action_i + "." + (numerator / denominator));
 			posterior.put(action_i, numerator / denominator);
-			sumEqualsOneCheck += numerator / denominator;
 		}
-		// Print out active affordances for debugging
-//		System.out.print("Active: ");
-//		for(AffordanceDelegate affDel : this.affordances) {
-//			if(affDel.isActive(s)) System.out.print(affDel + ",");
-//		}
-//		System.out.println("Total prob: " + sumEqualsOneCheck);
-//		System.out.println("\n");
-		
 		return posterior;
 	}
 	
 	/**
 	 * Computes the numerator of the posterior
-	 * @param s
-	 * @param action
+	 * @param s: State
+	 * @param action: Action
 	 * @return
 	 */
 	private double computeNumerator(State s, AbstractGroundedAction action) {
@@ -182,8 +169,8 @@ public class AffordancesController {
 	
 	/**
 	 * Computes the denominator of the posterior
-	 * @param s
-	 * @param action
+	 * @param s: State
+	 * @param action: Action
 	 * @return
 	 */
 	private double computeDenominator(State s, AbstractGroundedAction action) {

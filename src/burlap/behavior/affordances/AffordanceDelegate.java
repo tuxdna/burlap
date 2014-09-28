@@ -42,22 +42,23 @@ public class AffordanceDelegate {
 		 }
 	 }
 	 
-	 public void setTotalActionCountMap(Map<AbstractGroundedAction,Integer> totalActionCounts) {
-		 this.affordance.setTotalActionCountMap(totalActionCounts);
+	 public void setOptimalActionAffActiveCountMap(Map<AbstractGroundedAction,Integer> totalActionCounts) {
+		 this.affordance.setOptimalActionAffActiveCountMap(totalActionCounts);
+	 }
+	 
+	 public void setTotalOptimalActionCountMap(Map<AbstractGroundedAction,Integer> totalActionCounts) {
+		 this.affordance.setTotalOptimalActionCountMap(totalActionCounts);
 	 }
 	 
 	 
 	 // --- ACCESSORS ---
-	 public int getTotalActivations() {
-		 return this.affordance.numActivations;
-	 }
 	
 	 public Map<AbstractGroundedAction,Integer> getActionCounts() {
-		 return this.affordance.getActionCounts();
+		 return this.affordance.getActionOptimalAffActiveCounts();
 	 }
 	 
 	 public Map<AbstractGroundedAction,Integer> getTotalActionCounts() {
-		 return this.affordance.getTotalActionCounts();
+		 return this.affordance.getTotalActionOptimalCounts();
 	 }
 	 
 	 /**
@@ -97,8 +98,8 @@ public class AffordanceDelegate {
 		LogicalExpression goal = null;
 		
 		int[] actionNumCounts = null;
-		Map<AbstractGroundedAction,Integer> actionCounts = new HashMap<AbstractGroundedAction,Integer>();
-		Map<AbstractGroundedAction,Integer> totalActionCounts = new HashMap<AbstractGroundedAction,Integer>();
+		Map<AbstractGroundedAction,Integer> actionOptimalAffActiveCounts = new HashMap<AbstractGroundedAction,Integer>();
+		Map<AbstractGroundedAction,Integer> actionTotalOptimalCounts = new HashMap<AbstractGroundedAction,Integer>();
 
 		for(String line : affLines) {
 			if(line.isEmpty()) {
@@ -113,7 +114,7 @@ public class AffordanceDelegate {
 			if (line.equals("---")) {
 				// Finished reading action counts -- ready to start reading action set sizes
 				readActCounts = false;
-				actionNumCounts = new int[actionCounts.size()];
+				actionNumCounts = new int[actionOptimalAffActiveCounts.size()];
 				continue;
 			}
 			
@@ -151,8 +152,9 @@ public class AffordanceDelegate {
 				String actName = info[0];
 				Integer count = Integer.parseInt(info[1]);
 				
-				Integer totalCount = 900;
-				if(!expertFlag) totalCount = Integer.parseInt(info[2]);
+				Integer totalOptimalActCount;
+				if(expertFlag) totalOptimalActCount = 900;
+				totalOptimalActCount = Integer.parseInt(info[2]);
 				
 				// Get action free variables
 				Action act = d.getAction(actName);
@@ -165,16 +167,16 @@ public class AffordanceDelegate {
 				String[] actionParams = makeFreeVarListFromObjectClasses(act.getParameterClasses());
 				
 				GroundedAction ga = new GroundedAction(act, actionParams);
-				actionCounts.put(ga, count);
-				totalActionCounts.put(ga, totalCount);
+				actionOptimalAffActiveCounts.put(ga, count);
+				actionTotalOptimalCounts.put(ga, totalOptimalActCount);
 			} 
 		}
 		
 		// Create the Affordance
-		List<AbstractGroundedAction> allActions = new ArrayList<AbstractGroundedAction>(actionCounts.keySet()); 
+		List<AbstractGroundedAction> allActions = new ArrayList<AbstractGroundedAction>(actionOptimalAffActiveCounts.keySet()); 
 		Affordance aff = new Affordance(preCondition, goal, allActions);
-		aff.setActionCounts(actionCounts);
-		aff.setTotalActionCountMap(totalActionCounts);
+		aff.setOptimalActionAffActiveCountMap(actionOptimalAffActiveCounts);
+		aff.setTotalOptimalActionCountMap(actionTotalOptimalCounts);
 		
 		AffordanceDelegate affDelegate = new AffordanceDelegate(aff);
 		
@@ -207,8 +209,8 @@ public class AffordanceDelegate {
 	 */
 	public void printCounts() {
 		System.out.println("Affordance pred: " + this.affordance.preCondition.toString());
-		for (AbstractGroundedAction a: this.affordance.getActionCounts().keySet()) {
-			System.out.println(a.toString() + ": " + this.affordance.getActionCounts().get(a));
+		for (AbstractGroundedAction a: this.affordance.getActionOptimalAffActiveCounts().keySet()) {
+			System.out.println(a.toString() + ": " + this.affordance.getActionOptimalAffActiveCounts().get(a));
 		}
 	}
 	
@@ -225,8 +227,8 @@ public class AffordanceDelegate {
 				
 		// Add action counts (w/ total action counts
 		
-		for (AbstractGroundedAction a: this.affordance.getActionCounts().keySet()) {
-			out += a.actionName() + "," + this.affordance.getActionCounts().get(a) + "," + this.affordance.getTotalActionCounts().get(a) + "\n";
+		for (AbstractGroundedAction a: this.affordance.getActionOptimalAffActiveCounts().keySet()) {
+			out += a.actionName() + "," + this.affordance.getActionOptimalAffActiveCounts().get(a) + "," + this.affordance.getTotalActionOptimalCounts().get(a) + "\n";
 		}
 
 		out += "===\n";

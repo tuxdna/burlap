@@ -3,18 +3,12 @@
  */
 package burlap.behavior.affordances;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import burlap.oomdp.core.AbstractGroundedAction;
-import burlap.oomdp.core.State;
 import burlap.oomdp.logicalexpressions.LogicalExpression;
-import cc.mallet.types.Dirichlet;
 
 /**
  * @author dabel
@@ -22,9 +16,8 @@ import cc.mallet.types.Dirichlet;
  */
 public class Affordance {
 
-	private Map<AbstractGroundedAction, Integer> 	actionCounts;
-	private Map<AbstractGroundedAction,Integer>		totalActionCounts;
-	public int numActivations;
+	private Map<AbstractGroundedAction, Integer> 	actionOptimalAffActiveCounts;
+	private Map<AbstractGroundedAction,Integer>		totalActionOptimalCounts;
 	public LogicalExpression preCondition;
 	public LogicalExpression goalDescription;
 	
@@ -45,11 +38,12 @@ public class Affordance {
 	 * Initiliazes counts for the dirichlet multinomial and dirichlet process.
 	 */
 	private void initCounts(List<AbstractGroundedAction> fullActionSet) {
-		this.actionCounts = new HashMap<AbstractGroundedAction,Integer>();
+		this.actionOptimalAffActiveCounts = new HashMap<AbstractGroundedAction,Integer>();
+		this.totalActionOptimalCounts = new HashMap<AbstractGroundedAction,Integer>();
 		for (AbstractGroundedAction a: fullActionSet) {
-			this.actionCounts.put(a, 0);
-		}
-		
+			this.actionOptimalAffActiveCounts.put(a, 0);
+			this.totalActionOptimalCounts.put(a, 0);
+		}	
 	}
 
 	/**
@@ -58,45 +52,44 @@ public class Affordance {
 	 * @return
 	 */
 	public double probActionIsRelevant(AbstractGroundedAction action) {
-		// TODO: add smoothing, dirichlet, etc.
-		double counts = (double) this.actionCounts.get(action);
-		double totalCounts = (double) this.totalActionCounts.get(action);
+		double optimalActAffActive = (double) this.actionOptimalAffActiveCounts.get(action);
+		double totalActOptimal = (double) this.totalActionOptimalCounts.get(action);
 
-		return counts / totalCounts;
+		return optimalActAffActive / totalActOptimal;
 	}
 	
 	// --- Accessors ---
 	
-	public Map<AbstractGroundedAction, Integer> getActionCounts() {
-		return actionCounts;
+	public Map<AbstractGroundedAction, Integer> getActionOptimalAffActiveCounts() {
+		return actionOptimalAffActiveCounts;
 	}
 	
-	public Map<AbstractGroundedAction, Integer> getTotalActionCounts() {
-		return totalActionCounts;
+	public Map<AbstractGroundedAction, Integer> getTotalActionOptimalCounts() {
+		return totalActionOptimalCounts;
 	}
 
 	// --- Mutators ---
 	
-	public void setActionCounts(Map<AbstractGroundedAction, Integer> actionCounts) {
-		this.actionCounts = actionCounts;
-		for(AbstractGroundedAction aga : actionCounts.keySet()) {
-			this.numActivations += actionCounts.get(aga);
-		}
+	public void setOptimalActionAffActiveCountMap(Map<AbstractGroundedAction, Integer> actionCounts) {
+		this.actionOptimalAffActiveCounts = actionCounts;
 	}
 	
-	public void setTotalActionCountMap(Map<AbstractGroundedAction,Integer> totalActionCounts) {
-		this.totalActionCounts = totalActionCounts;
+	public void setTotalOptimalActionCountMap(Map<AbstractGroundedAction,Integer> totalActionCounts) {
+		this.totalActionOptimalCounts = totalActionCounts;
 	}
 
-	public void incrementActionCount(AbstractGroundedAction a) {
-		Integer count = this.actionCounts.get(a);
-		this.actionCounts.put(a, count + 1);
+	public void incrementActionOptimalAffActive(AbstractGroundedAction a) {
+		Integer count = this.actionOptimalAffActiveCounts.get(a);
+		this.actionOptimalAffActiveCounts.put(a, count + 1);
+	}
+	
+	public void incrementTotalActionOptimal(AbstractGroundedAction a) {
+		Integer count = this.totalActionOptimalCounts.get(a);
+		this.totalActionOptimalCounts.put(a, count + 1);
 	}
 	
 	public String toString() {
 		return this.preCondition.toString() + "," + this.goalDescription.toString();
-	}
-
-	
+	}	
 	
 }
